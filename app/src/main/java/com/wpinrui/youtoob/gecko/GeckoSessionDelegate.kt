@@ -3,11 +3,13 @@ package com.wpinrui.youtoob.gecko
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.MediaSession
+import com.wpinrui.youtoob.utils.PermissionBridge
 
 class GeckoSessionDelegate(
     private val onFullscreenChange: (Boolean) -> Unit,
     private val onMediaPlaying: () -> Unit,
-    private val onMediaStopped: () -> Unit
+    private val onMediaStopped: () -> Unit,
+    private val permissionBridge: PermissionBridge
 ) : GeckoSession.ContentDelegate,
     GeckoSession.PermissionDelegate,
     MediaSession.Delegate {
@@ -53,8 +55,11 @@ class GeckoSessionDelegate(
         permissions: Array<out String>?,
         callback: GeckoSession.PermissionDelegate.Callback
     ) {
-        // For now, grant all - in production would need runtime permission handling
-        callback.grant()
+        if (permissions.isNullOrEmpty()) {
+            callback.grant()
+            return
+        }
+        permissionBridge.requestPermissions(permissions, callback)
     }
 
     // MediaSessionDelegate - Handle media playback state
