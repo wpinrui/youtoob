@@ -1,24 +1,16 @@
 package com.wpinrui.youtoob.extensions
 
-import android.content.Context
 import android.util.Log
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.WebExtension
 import org.mozilla.geckoview.WebExtensionController
-import java.io.File
 
 class ExtensionManager(
-    private val context: Context,
     private val runtime: GeckoRuntime
 ) {
 
     private val controller: WebExtensionController = runtime.webExtensionController
     private val installedExtensions = mutableMapOf<String, WebExtension>()
-    private val extensionsDir = File(context.filesDir, "extensions")
-
-    init {
-        extensionsDir.mkdirs()
-    }
 
     fun loadBundledExtensions(
         onExtensionLoaded: ((ExtensionConfig, WebExtension) -> Unit)? = null,
@@ -34,44 +26,23 @@ class ExtensionManager(
         onSuccess: ((ExtensionConfig, WebExtension) -> Unit)? = null,
         onError: ((ExtensionConfig, Throwable) -> Unit)? = null
     ) {
-        try {
-            val xpiFile = copyXpiFromAssets(config)
-            val uri = "file://${xpiFile.absolutePath}"
+        Log.d(TAG, "Loading extension: ${config.name} from ${config.builtInUri}")
 
-            Log.d(TAG, "Loading extension: ${config.name} from $uri")
-
-            controller.install(uri).accept(
-                { extension ->
-                    if (extension != null) {
-                        Log.i(TAG, "Extension installed: ${extension.metaData?.name ?: config.name}")
-                        installedExtensions[extension.id] = extension
-                        onSuccess?.invoke(config, extension)
-                    } else {
-                        Log.w(TAG, "Extension returned null: ${config.name}")
-                    }
-                },
-                { error ->
-                    Log.e(TAG, "Failed to install extension: ${config.name}", error)
-                    error?.let { onError?.invoke(config, it) }
+        controller.ensureBuiltIn(config.builtInUri, config.id).accept(
+            { extension ->
+                if (extension != null) {
+                    Log.i(TAG, "Extension installed: ${extension.metaData?.name ?: config.name}")
+                    installedExtensions[extension.id] = extension
+                    onSuccess?.invoke(config, extension)
+                } else {
+                    Log.w(TAG, "Extension returned null: ${config.name}")
                 }
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to copy extension: ${config.name}", e)
-            onError?.invoke(config, e)
-        }
-    }
-
-    private fun copyXpiFromAssets(config: ExtensionConfig): File {
-        val destFile = File(extensionsDir, config.xpiFileName)
-
-        // Always copy to ensure we have the latest version
-        context.assets.open(config.assetPath).use { input ->
-            destFile.outputStream().use { output ->
-                input.copyTo(output)
+            },
+            { error ->
+                Log.e(TAG, "Failed to install extension: ${config.name}", error)
+                error?.let { onError?.invoke(config, it) }
             }
-        }
-
-        return destFile
+        )
     }
 
     fun getInstalledExtension(id: String): WebExtension? = installedExtensions[id]

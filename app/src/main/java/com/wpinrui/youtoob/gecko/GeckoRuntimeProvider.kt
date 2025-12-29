@@ -23,7 +23,7 @@ object GeckoRuntimeProvider {
             runtime ?: GeckoRuntime.create(context.applicationContext).also { newRuntime ->
                 runtime = newRuntime
                 setupPromptDelegate(newRuntime)
-                loadExtensions(context.applicationContext, newRuntime)
+                loadExtensions(newRuntime)
             }
         }
     }
@@ -56,8 +56,8 @@ object GeckoRuntimeProvider {
         }
     }
 
-    private fun loadExtensions(context: Context, runtime: GeckoRuntime) {
-        extensionManager = ExtensionManager(context, runtime).also { manager ->
+    private fun loadExtensions(runtime: GeckoRuntime) {
+        extensionManager = ExtensionManager(runtime).also { manager ->
             manager.loadBundledExtensions(
                 onExtensionLoaded = { config, extension ->
                     Log.i(TAG, "Extension loaded: ${config.name} (${extension.id})")

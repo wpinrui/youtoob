@@ -42,6 +42,11 @@ android {
     androidResources {
         noCompress += listOf("xpi", "json", "js", "css", "html", "svg", "png", "woff", "woff2", "dat", "txt")
     }
+
+    // Include _locales folders in assets (default pattern excludes underscore-prefixed dirs)
+    aaptOptions {
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~"
+    }
 }
 
 dependencies {
