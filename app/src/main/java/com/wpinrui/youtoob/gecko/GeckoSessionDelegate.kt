@@ -2,10 +2,15 @@ package com.wpinrui.youtoob.gecko
 
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoResult
+import org.mozilla.geckoview.MediaSession
 
 class GeckoSessionDelegate(
-    private val onFullscreenChange: (Boolean) -> Unit
-) : GeckoSession.ContentDelegate, GeckoSession.PermissionDelegate {
+    private val onFullscreenChange: (Boolean) -> Unit,
+    private val onMediaPlaying: () -> Unit,
+    private val onMediaStopped: () -> Unit
+) : GeckoSession.ContentDelegate,
+    GeckoSession.PermissionDelegate,
+    GeckoSession.MediaSessionDelegate {
 
     // ContentDelegate - Fullscreen handling
     override fun onFullScreen(session: GeckoSession, fullScreen: Boolean) {
@@ -50,5 +55,26 @@ class GeckoSessionDelegate(
     ) {
         // For now, grant all - in production would need runtime permission handling
         callback.grant()
+    }
+
+    // MediaSessionDelegate - Handle media playback state
+    override fun onActivated(session: GeckoSession, mediaSession: MediaSession) {
+        onMediaPlaying()
+    }
+
+    override fun onDeactivated(session: GeckoSession, mediaSession: MediaSession) {
+        onMediaStopped()
+    }
+
+    override fun onPlay(session: GeckoSession, mediaSession: MediaSession) {
+        onMediaPlaying()
+    }
+
+    override fun onPause(session: GeckoSession, mediaSession: MediaSession) {
+        onMediaStopped()
+    }
+
+    override fun onStop(session: GeckoSession, mediaSession: MediaSession) {
+        onMediaStopped()
     }
 }
