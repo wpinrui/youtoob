@@ -1,2 +1,24 @@
+# Claude Code local config
 .claude/
 agents/
+
+# Android/Gradle
+*.iml
+.gradle
+/local.properties
+local.properties
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# IDE
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+
+# OS
+.DS_Store
