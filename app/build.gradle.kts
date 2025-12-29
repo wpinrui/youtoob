@@ -40,7 +40,7 @@ android {
 
     // Don't compress extension assets - GeckoView needs to read them directly
     androidResources {
-        noCompress += listOf("json", "js", "css", "html", "svg", "png", "woff", "woff2", "dat", "txt")
+        noCompress += listOf("xpi", "json", "js", "css", "html", "svg", "png", "woff", "woff2", "dat", "txt")
     }
 }
 

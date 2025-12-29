@@ -18,13 +18,13 @@ object GeckoRuntimeProvider {
         return runtime ?: synchronized(this) {
             runtime ?: GeckoRuntime.create(context.applicationContext).also { newRuntime ->
                 runtime = newRuntime
-                loadExtensions(newRuntime)
+                loadExtensions(context.applicationContext, newRuntime)
             }
         }
     }
 
-    private fun loadExtensions(runtime: GeckoRuntime) {
-        extensionManager = ExtensionManager(runtime).also { manager ->
+    private fun loadExtensions(context: Context, runtime: GeckoRuntime) {
+        extensionManager = ExtensionManager(context, runtime).also { manager ->
             manager.loadBundledExtensions(
                 onExtensionLoaded = { config, extension ->
                     Log.i(TAG, "Extension loaded: ${config.name} (${extension.id})")
