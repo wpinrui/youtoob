@@ -1,0 +1,140 @@
+# Youtoob
+
+A premium YouTube experience for Android using GeckoView with Firefox extensions.
+
+## What is Youtoob?
+
+Youtoob wraps YouTube's mobile site in Firefox's GeckoView engine, enabling Firefox extensions like uBlock Origin and SponsorBlock to work natively. This provides an ad-free, sponsor-free YouTube experience with enhanced controls and customization.
+
+## Why Youtoob?
+
+- **Ad-free**: uBlock Origin blocks all YouTube ads
+- **Sponsor-free**: SponsorBlock automatically skips sponsor segments
+- **Better quality**: Force HD video quality by default
+- **Custom controls**: Gestures, background playback, PiP mode
+- **Download support**: Built-in video download manager
+
+## Development Roadmap
+
+### Phase 1: Core Foundation ✅ (Current Phase)
+**Goal**: Get basic GeckoView wrapper working with YouTube
+
+- [ ] Set up Android project structure
+- [ ] Integrate GeckoView dependency
+- [ ] Create basic Activity with GeckoView
+- [ ] Load YouTube mobile site successfully
+- [ ] Test basic video playback
+- [ ] Handle WebView permissions (audio, video, storage)
+
+**Estimated**: 1-2 weeks
+
+### Phase 2: Extension Integration 🔄
+**Goal**: Get Firefox extensions working
+
+- [ ] Research GeckoView extension API
+- [ ] Bundle uBlock Origin extension
+- [ ] Bundle SponsorBlock extension
+- [ ] Bundle YouTube HD extension
+- [ ] Create extension manager system
+- [ ] Test extension loading and functionality
+- [ ] Handle extension updates
+
+**Estimated**: 2-3 weeks
+
+### Phase 3: Custom UI & Controls 📋
+**Goal**: Improve UX beyond basic browser wrapper
+
+- [ ] Design custom bottom navigation
+- [ ] Implement gesture controls (swipe for volume/brightness)
+- [ ] Add custom playback controls
+- [ ] Hide unnecessary YouTube UI elements (via CSS injection)
+- [ ] Create settings screen for app customization
+- [ ] Implement custom theming
+
+**Estimated**: 2 weeks
+
+### Phase 4: Download Manager 📋
+**Goal**: Integrate yt-dlp for video downloads
+
+- [ ] Research yt-dlp Android integration options
+- [ ] Create download manager UI
+- [ ] Implement download queue system
+- [ ] Add download quality selection
+- [ ] Handle storage permissions
+- [ ] Add download progress notifications
+- [ ] Create downloaded videos library
+
+**Estimated**: 2-3 weeks
+
+### Phase 5: Advanced Features 📋
+**Goal**: Match or exceed native app experience
+
+- [ ] Background audio playback
+- [ ] Picture-in-Picture (PiP) mode
+- [ ] Media session integration (lock screen controls)
+- [ ] Share intent handling
+- [ ] Custom subscription management
+- [ ] Watch history tracking
+- [ ] Playlist management
+
+**Estimated**: 3-4 weeks
+
+### Phase 6: Performance & Polish 📋
+**Goal**: Optimize and refine
+
+- [ ] Memory optimization for GeckoView
+- [ ] Battery usage optimization
+- [ ] Aggressive caching strategies
+- [ ] Preloading optimizations
+- [ ] UI/UX refinements based on testing
+- [ ] Comprehensive error handling
+- [ ] Crash reporting setup
+
+**Estimated**: 2 weeks
+
+### Phase 7: Release Preparation 📋
+**Goal**: Prepare for distribution
+
+- [ ] Comprehensive testing on various devices
+- [ ] Write user documentation
+- [ ] Create app store listing materials
+- [ ] Legal review (ToS, privacy policy)
+- [ ] F-Droid submission preparation
+- [ ] GitHub Releases setup
+- [ ] Community guidelines
+
+**Estimated**: 1-2 weeks
+
+## Tech Stack
+
+- **Language**: Kotlin
+- **Min SDK**: 24 (Android 7.0)
+- **Target SDK**: 34 (Android 14)
+- **Rendering**: GeckoView
+- **Architecture**: MVVM + Repository pattern
+- **DI**: Dagger Hilt
+- **Async**: Coroutines + Flow
+- **Networking**: Retrofit (for yt-dlp integration)
+
+## Build & Run
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/youtoob.git
+cd youtoob
+
+# Build the project
+./gradlew build
+
+# Install on device
+./gradlew installDebug
+
+# Run tests
+./gradlew test
+```
+
+## Roadmap Status
+
+- **Current Phase**: Phase 1 (Core Foundation)
+- **Next Milestone**: Basic GeckoView integration with YouTube playback
+- **Total Progress**: 0% (Just starting!)
