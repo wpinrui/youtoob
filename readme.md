@@ -1,12 +1,12 @@
-# Youtoob
+# YouToob
 
 A premium YouTube experience for Android using GeckoView with Firefox extensions.
 
-## What is Youtoob?
+## What is YouToob?
 
-Youtoob wraps YouTube's mobile site in Firefox's GeckoView engine, enabling Firefox extensions like uBlock Origin and SponsorBlock to work natively. This provides an ad-free, sponsor-free YouTube experience with enhanced controls and customization.
+YouToob wraps YouTube's mobile site in Firefox's GeckoView engine, enabling Firefox extensions like uBlock Origin and SponsorBlock to work natively. This provides an ad-free, sponsor-free YouTube experience with enhanced controls and customization.
 
-## Why Youtoob?
+## Why YouToob?
 
 - **Ad-free**: uBlock Origin blocks all YouTube ads
 - **Sponsor-free**: SponsorBlock automatically skips sponsor segments
@@ -19,7 +19,7 @@ Youtoob wraps YouTube's mobile site in Firefox's GeckoView engine, enabling Fire
 ### Phase 1: Core Foundation ✅ (Current Phase)
 **Goal**: Get basic GeckoView wrapper working with YouTube
 
-- [ ] Set up Android project structure
+- [x] Set up Android project structure
 - [ ] Integrate GeckoView dependency
 - [ ] Create basic Activity with GeckoView
 - [ ] Load YouTube mobile site successfully
@@ -108,7 +108,7 @@ Youtoob wraps YouTube's mobile site in Firefox's GeckoView engine, enabling Fire
 ## Tech Stack
 
 - **Language**: Kotlin
-- **Min SDK**: 24 (Android 7.0)
+- **Min SDK**: 29 (Android 10)
 - **Target SDK**: 34 (Android 14)
 - **Rendering**: GeckoView
 - **Architecture**: MVVM + Repository pattern
