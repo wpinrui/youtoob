@@ -109,7 +109,7 @@ YouToob wraps YouTube's mobile site in Firefox's GeckoView engine, enabling Fire
 
 - **Language**: Kotlin
 - **Min SDK**: 29 (Android 10)
-- **Target SDK**: 34 (Android 14)
+- **Target SDK**: 36 (Android 16)
 - **Rendering**: GeckoView
 - **Architecture**: MVVM + Repository pattern
 - **DI**: Dagger Hilt
