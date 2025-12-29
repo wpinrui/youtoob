@@ -23,7 +23,7 @@ object GeckoRuntimeProvider {
             runtime ?: GeckoRuntime.create(context.applicationContext).also { newRuntime ->
                 runtime = newRuntime
                 setupPromptDelegate(newRuntime)
-                loadExtensions(newRuntime)
+                loadExtensions(context.applicationContext, newRuntime)
             }
         }
     }
@@ -56,16 +56,24 @@ object GeckoRuntimeProvider {
         }
     }
 
-    private fun loadExtensions(runtime: GeckoRuntime) {
-        extensionManager = ExtensionManager(runtime).also { manager ->
-            manager.loadBundledExtensions(
-                onExtensionLoaded = { config, extension ->
-                    Log.i(TAG, "Extension loaded: ${config.name} (${extension.id})")
-                },
-                onError = { config, error ->
-                    Log.e(TAG, "Failed to load extension: ${config.name}", error)
+    private fun loadExtensions(context: Context, runtime: GeckoRuntime) {
+        extensionManager = ExtensionManager(runtime, context).also { manager ->
+            manager.loadAllExtensions { results ->
+                val successful = results.count { it.isSuccess }
+                val failed = results.count { it.isFailure }
+                Log.i(TAG, "Extensions loaded: $successful successful, $failed failed")
+
+                results.forEach { result ->
+                    result.fold(
+                        onSuccess = { extension ->
+                            Log.i(TAG, "Extension loaded: ${extension.metaData?.name} (${extension.id})")
+                        },
+                        onFailure = { error ->
+                            Log.e(TAG, "Extension failed to load", error)
+                        }
+                    )
                 }
-            )
+            }
         }
     }
 
