@@ -24,7 +24,7 @@ object BundledExtensions {
     )
 
     val YOUTUBE_HD = ExtensionConfig(
-        id = "nicememe@nicememe.com",
+        id = "{7b1bf0b6-a1b9-42b0-b75d-252036438bdc}",
         name = "YouTube High Definition",
         assetPath = "extensions/youtube-hd"
     )
