@@ -10,7 +10,7 @@ class GeckoSessionDelegate(
     private val onMediaStopped: () -> Unit
 ) : GeckoSession.ContentDelegate,
     GeckoSession.PermissionDelegate,
-    GeckoSession.MediaSessionDelegate {
+    MediaSession.Delegate {
 
     // ContentDelegate - Fullscreen handling
     override fun onFullScreen(session: GeckoSession, fullScreen: Boolean) {
