@@ -37,7 +37,6 @@ YouToob wraps YouTube's mobile site in Firefox's GeckoView engine, enabling Fire
 - [x] Bundle YouTube HD extension
 - [x] Create extension manager system
 - [ ] Test extension loading and functionality
-- [ ] Handle extension updates
 
 **Estimated**: 2-3 weeks
 
@@ -89,6 +88,7 @@ YouToob wraps YouTube's mobile site in Firefox's GeckoView engine, enabling Fire
 - [ ] UI/UX refinements based on testing
 - [ ] Comprehensive error handling
 - [ ] Crash reporting setup
+- [ ] Handle extension updates
 
 **Estimated**: 2 weeks
 
