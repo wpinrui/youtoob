@@ -21,8 +21,8 @@ YouToob wraps YouTube's mobile site in Firefox's GeckoView engine, enabling Fire
 
 - [x] Set up Android project structure
 - [x] Integrate GeckoView dependency
-- [ ] Create basic Activity with GeckoView
-- [ ] Load YouTube mobile site successfully
+- [x] Create basic Activity with GeckoView
+- [x] Load YouTube mobile site successfully
 - [ ] Test basic video playback
 - [ ] Handle WebView permissions (audio, video, storage)
 
