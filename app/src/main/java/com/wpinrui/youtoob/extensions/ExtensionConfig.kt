@@ -1,32 +1,34 @@
 package com.wpinrui.youtoob.extensions
 
-data class ExtensionConfig(
+enum class BundledExtension(
     val id: String,
-    val name: String,
-    val folderName: String
+    val displayName: String,
+    val folderName: String,
+    val defaultEnabled: Boolean = true
 ) {
+    UBLOCK_ORIGIN(
+        id = "uBlock0@raymondhill.net",
+        displayName = "uBlock Origin",
+        folderName = "ublock_origin",
+        defaultEnabled = true
+    ),
+    SPONSORBLOCK(
+        id = "sponsorBlocker@ajay.app",
+        displayName = "SponsorBlock",
+        folderName = "sponsorblock",
+        defaultEnabled = true
+    ),
+    YOUTUBE_HD(
+        id = "{7b1bf0b6-a1b9-42b0-b75d-252036438bdc}",
+        displayName = "YouTube High Definition",
+        folderName = "youtube_hd",
+        defaultEnabled = true
+    );
+
     val builtInUri: String
         get() = "resource://android/assets/extensions/$folderName/"
-}
 
-object BundledExtensions {
-    val UBLOCK_ORIGIN = ExtensionConfig(
-        id = "uBlock0@raymondhill.net",
-        name = "uBlock Origin",
-        folderName = "ublock_origin"
-    )
-
-    val SPONSORBLOCK = ExtensionConfig(
-        id = "sponsorBlocker@ajay.app",
-        name = "SponsorBlock",
-        folderName = "sponsorblock"
-    )
-
-    val YOUTUBE_HD = ExtensionConfig(
-        id = "{7b1bf0b6-a1b9-42b0-b75d-252036438bdc}",
-        name = "YouTube High Definition",
-        folderName = "youtube_hd"
-    )
-
-    val ALL = listOf(UBLOCK_ORIGIN, SPONSORBLOCK, YOUTUBE_HD)
+    companion object {
+        fun fromId(id: String): BundledExtension? = entries.find { it.id == id }
+    }
 }
