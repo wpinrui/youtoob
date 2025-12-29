@@ -31,7 +31,7 @@ YouToob wraps YouTube's mobile site in Firefox's GeckoView engine, enabling Fire
 ### Phase 2: Extension Integration 🔄 (Current Phase)
 **Goal**: Get Firefox extensions working
 
-- [ ] Research GeckoView extension API
+- [x] Research GeckoView extension API
 - [ ] Bundle uBlock Origin extension
 - [ ] Bundle SponsorBlock extension
 - [ ] Bundle YouTube HD extension
