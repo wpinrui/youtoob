@@ -5,7 +5,9 @@ import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.WebExtension
 import org.mozilla.geckoview.WebExtensionController
 
-class ExtensionManager(private val runtime: GeckoRuntime) {
+class ExtensionManager(
+    private val runtime: GeckoRuntime
+) {
 
     private val controller: WebExtensionController = runtime.webExtensionController
     private val installedExtensions = mutableMapOf<String, WebExtension>()
@@ -24,12 +26,12 @@ class ExtensionManager(private val runtime: GeckoRuntime) {
         onSuccess: ((ExtensionConfig, WebExtension) -> Unit)? = null,
         onError: ((ExtensionConfig, Throwable) -> Unit)? = null
     ) {
-        Log.d(TAG, "Loading extension: ${config.name} from ${config.assetUri}")
+        Log.d(TAG, "Loading extension: ${config.name} from ${config.builtInUri}")
 
-        controller.ensureBuiltIn(config.assetUri, config.id).accept(
+        controller.ensureBuiltIn(config.builtInUri, config.id).accept(
             { extension ->
                 if (extension != null) {
-                    Log.i(TAG, "Extension loaded: ${extension.metaData?.name ?: config.name}")
+                    Log.i(TAG, "Extension installed: ${extension.metaData?.name ?: config.name}")
                     installedExtensions[extension.id] = extension
                     onSuccess?.invoke(config, extension)
                 } else {
@@ -37,7 +39,7 @@ class ExtensionManager(private val runtime: GeckoRuntime) {
                 }
             },
             { error ->
-                Log.e(TAG, "Failed to load extension: ${config.name}", error)
+                Log.e(TAG, "Failed to install extension: ${config.name}", error)
                 error?.let { onError?.invoke(config, it) }
             }
         )
