@@ -29,22 +29,23 @@ class ExtensionManager(
         }
 
         var loadedCount = 0
+        fun checkCompletion() {
+            loadedCount++
+            if (loadedCount == extensionsToLoad.size) {
+                onComplete?.invoke(results)
+            }
+        }
+
         extensionsToLoad.forEach { extension ->
             loadExtension(
                 extension = extension,
                 onSuccess = { webExtension ->
                     results.add(Result.success(webExtension))
-                    loadedCount++
-                    if (loadedCount == extensionsToLoad.size) {
-                        onComplete?.invoke(results)
-                    }
+                    checkCompletion()
                 },
                 onError = { error ->
                     results.add(Result.failure(error))
-                    loadedCount++
-                    if (loadedCount == extensionsToLoad.size) {
-                        onComplete?.invoke(results)
-                    }
+                    checkCompletion()
                 }
             )
         }
