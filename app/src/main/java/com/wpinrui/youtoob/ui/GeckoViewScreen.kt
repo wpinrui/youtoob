@@ -7,6 +7,8 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -20,6 +22,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.getSystemService
 import com.wpinrui.youtoob.gecko.GeckoRuntimeProvider
 import com.wpinrui.youtoob.gecko.GeckoSessionDelegate
+import com.wpinrui.youtoob.utils.PermissionBridge
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
@@ -45,6 +48,24 @@ fun GeckoViewScreen(modifier: Modifier = Modifier) {
 
     val runtime = remember { GeckoRuntimeProvider.getRuntime(context) }
 
+    val permissionBridge = remember { PermissionBridge() }
+    var pendingPermissionCallback by remember { mutableStateOf<((Map<String, Boolean>) -> Unit)?>(null) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        pendingPermissionCallback?.invoke(results)
+        pendingPermissionCallback = null
+    }
+
+    DisposableEffect(permissionBridge) {
+        permissionBridge.setLauncher { permissions, callback ->
+            pendingPermissionCallback = callback
+            permissionLauncher.launch(permissions)
+        }
+        onDispose { }
+    }
+
     val delegate = remember {
         GeckoSessionDelegate(
             onFullscreenChange = { fullscreen ->
@@ -59,7 +80,8 @@ fun GeckoViewScreen(modifier: Modifier = Modifier) {
             },
             onMediaStopped = {
                 audioManager?.abandonAudioFocusRequest(audioFocusRequest)
-            }
+            },
+            permissionBridge = permissionBridge
         )
     }
 
