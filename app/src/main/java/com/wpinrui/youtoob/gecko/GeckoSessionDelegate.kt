@@ -17,7 +17,7 @@ class GeckoSessionDelegate(
         session: GeckoSession,
         perm: GeckoSession.PermissionDelegate.ContentPermission
     ): GeckoResult<Int> {
-        val dominated = when (perm.permission) {
+        val result = when (perm.permission) {
             GeckoSession.PermissionDelegate.PERMISSION_AUTOPLAY_AUDIBLE,
             GeckoSession.PermissionDelegate.PERMISSION_AUTOPLAY_INAUDIBLE,
             GeckoSession.PermissionDelegate.PERMISSION_MEDIA_KEY_SYSTEM_ACCESS,
@@ -27,7 +27,7 @@ class GeckoSessionDelegate(
             else ->
                 GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY
         }
-        return GeckoResult.fromValue(dominated)
+        return GeckoResult.fromValue(result)
     }
 
     override fun onMediaPermissionRequest(
