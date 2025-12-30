@@ -18,10 +18,10 @@ enum class BundledExtension(
         folderName = "sponsorblock",
         defaultEnabled = true
     ),
-    YOUTUBE_HD(
-        id = "{7b1bf0b6-a1b9-42b0-b75d-252036438bdc}",
-        displayName = "YouTube High Definition",
-        folderName = "youtube_hd",
+    HIDE_YOUTUBE_SHORTS(
+        id = "{88ebde3a-4581-4c6b-8019-2a05a9e3e938}",
+        displayName = "Hide YouTube Shorts",
+        folderName = "hide_youtube_shorts",
         defaultEnabled = true
     ),
     YOUTOOB_PLAYER(

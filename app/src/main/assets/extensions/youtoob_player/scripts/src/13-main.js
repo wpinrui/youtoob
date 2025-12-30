@@ -80,6 +80,9 @@ function createCustomControls(video) {
     setupTopBar(video, controls);
     setupGestures(video, overlay);
 
+    // Auto-set to highest available quality
+    autoSetQuality();
+
     // Menu toggle buttons
     elements.speedBtn.addEventListener('click', (e) => {
         e.stopPropagation();

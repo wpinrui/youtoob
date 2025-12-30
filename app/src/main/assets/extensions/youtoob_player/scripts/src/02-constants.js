@@ -23,6 +23,11 @@ const QUALITY_LABELS = {
 
 const FALLBACK_QUALITIES = ['hd1080', 'hd720', 'large', 'medium', 'small'];
 
+// Quality priority for auto-setting (highest first)
+const QUALITY_PRIORITY = ['hd2160', 'hd1440', 'hd1080', 'hd720', 'large', 'medium', 'small', 'tiny'];
+const AUTO_QUALITY_POLL_INTERVAL_MS = 100;
+const AUTO_QUALITY_MAX_ATTEMPTS = 50;
+
 // Polling and delay constants
 const NAV_BUTTON_POLL_INTERVAL_MS = 2000;
 const VIDEO_INFO_DELAY_MS = 500;

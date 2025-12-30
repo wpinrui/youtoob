@@ -1,4 +1,47 @@
 // =============================================================================
+// Auto Quality Setting
+// =============================================================================
+
+function autoSetQuality() {
+    let attempts = 0;
+    const interval = setInterval(() => {
+        attempts++;
+        const ytPlayer = document.querySelector('.html5-video-player');
+
+        if (!ytPlayer || !ytPlayer.getAvailableQualityLevels || !ytPlayer.setPlaybackQualityRange) {
+            if (attempts >= AUTO_QUALITY_MAX_ATTEMPTS) {
+                clearInterval(interval);
+            }
+            return;
+        }
+
+        const availableQualities = ytPlayer.getAvailableQualityLevels();
+        if (!availableQualities || availableQualities.length === 0) {
+            if (attempts >= AUTO_QUALITY_MAX_ATTEMPTS) {
+                clearInterval(interval);
+            }
+            return;
+        }
+
+        // Find the highest available quality
+        let targetQuality = null;
+        for (const quality of QUALITY_PRIORITY) {
+            if (availableQualities.includes(quality)) {
+                targetQuality = quality;
+                break;
+            }
+        }
+
+        if (targetQuality) {
+            ytPlayer.setPlaybackQualityRange(targetQuality, targetQuality);
+            clearInterval(interval);
+        } else if (attempts >= AUTO_QUALITY_MAX_ATTEMPTS) {
+            clearInterval(interval);
+        }
+    }, AUTO_QUALITY_POLL_INTERVAL_MS);
+}
+
+// =============================================================================
 // Speed Formatting
 // =============================================================================
 
