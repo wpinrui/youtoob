@@ -26,12 +26,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.getSystemService
+import com.wpinrui.youtoob.data.SettingsRepository
+import com.wpinrui.youtoob.data.YoutoobSettings
 import com.wpinrui.youtoob.gecko.GeckoRuntimeProvider
 import com.wpinrui.youtoob.gecko.GeckoSessionDelegate
 import com.wpinrui.youtoob.gecko.ShareRequest
 import com.wpinrui.youtoob.ui.navigation.NavDestination
 import com.wpinrui.youtoob.utils.PermissionBridge
 import com.wpinrui.youtoob.utils.isVideoPageUrl
+import kotlinx.coroutines.flow.collectLatest
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
@@ -104,6 +107,31 @@ private fun injectCss(session: GeckoSession, isVideoPage: Boolean) {
     session.loadUri("javascript:$cssScript")
 }
 
+private fun injectSettings(session: GeckoSession, settings: YoutoobSettings) {
+    val qualityMap = mapOf(
+        "auto" to "auto",
+        "480" to "large",
+        "720" to "hd720",
+        "1080" to "hd1080",
+        "1440" to "hd1440",
+        "2160" to "hd2160"
+    )
+    val ytQuality = qualityMap[settings.defaultQuality.value] ?: "auto"
+
+    val settingsScript = """
+        (function() {
+            window._youtoobSettings = {
+                defaultQuality: '$ytQuality',
+                defaultSpeed: ${settings.defaultSpeed.value},
+                autoplayEnabled: ${settings.autoplayEnabled}
+            };
+            localStorage.setItem('youtoob_settings', JSON.stringify(window._youtoobSettings));
+        })();
+    """.trimIndent()
+
+    session.loadUri("javascript:$settingsScript")
+}
+
 @Composable
 fun GeckoViewScreen(
     modifier: Modifier = Modifier,
@@ -114,7 +142,6 @@ fun GeckoViewScreen(
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
-    var isFullscreen by remember { mutableStateOf(false) }
     var currentUrl by remember { mutableStateOf("") }
 
     val audioManager = remember { context.getSystemService<AudioManager>() }
@@ -130,6 +157,8 @@ fun GeckoViewScreen(
     }
 
     val runtime = remember { GeckoRuntimeProvider.getRuntime(context) }
+    val settingsRepository = remember { SettingsRepository(context) }
+    var cachedSettings by remember { mutableStateOf(YoutoobSettings()) }
 
     val permissionBridge = remember { PermissionBridge() }
     var pendingPermissionCallback by remember { mutableStateOf<((Map<String, Boolean>) -> Unit)?>(null) }
@@ -149,10 +178,15 @@ fun GeckoViewScreen(
         onDispose { }
     }
 
+    LaunchedEffect(settingsRepository) {
+        settingsRepository.settings.collectLatest { settings ->
+            cachedSettings = settings
+        }
+    }
+
     val delegate = remember {
         GeckoSessionDelegate(
             onFullscreenChange = { fullscreen ->
-                isFullscreen = fullscreen
                 onFullscreenChange(fullscreen)
                 activity?.let {
                     setFullscreen(it, fullscreen)
@@ -168,6 +202,9 @@ fun GeckoViewScreen(
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
                 injectCss(session, currentUrl.isVideoPageUrl())
+                if (currentUrl.isVideoPageUrl()) {
+                    injectSettings(session, cachedSettings)
+                }
             },
             onUrlChange = { url, session ->
                 val wasVideoPage = currentUrl.isVideoPageUrl()
@@ -180,12 +217,21 @@ fun GeckoViewScreen(
                         injectCss(session, isVideoPage)
                     }, SPA_NAVIGATION_DELAY_MS)
                 }
+                // Inject settings on navigation to video page
+                if (isVideoPage) {
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        injectSettings(session, cachedSettings)
+                    }, SPA_NAVIGATION_DELAY_MS)
+                }
             },
             onShareRequest = { request, callback ->
                 launchShareIntent(context, request, callback)
             },
             onGoBackRequest = { session ->
                 session.goBack()
+            },
+            onSettingsRequest = {
+                context.startActivity(Intent(context, SettingsActivity::class.java))
             }
         )
     }

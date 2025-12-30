@@ -1,44 +1,92 @@
 // =============================================================================
+// Settings Helpers
+// =============================================================================
+
+function getYoutoobSettings() {
+    // First check window object (set by native injection)
+    if (window._youtoobSettings) {
+        return window._youtoobSettings;
+    }
+    // Fallback to localStorage
+    try {
+        const stored = localStorage.getItem('youtoob_settings');
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (e) {
+        // Ignore parse errors
+    }
+    // Default settings
+    return {
+        defaultQuality: 'auto',
+        defaultSpeed: 1.0,
+        autoplayEnabled: true
+    };
+}
+
+// =============================================================================
 // Auto Quality Setting
 // =============================================================================
 
+function findBestAvailableQuality(availableQualities, preferredQuality) {
+    if (availableQualities.includes(preferredQuality)) {
+        return preferredQuality;
+    }
+    const qualityIndex = QUALITY_PRIORITY.indexOf(preferredQuality);
+    if (qualityIndex === -1) return null;
+
+    for (let i = qualityIndex; i < QUALITY_PRIORITY.length; i++) {
+        if (availableQualities.includes(QUALITY_PRIORITY[i])) {
+            return QUALITY_PRIORITY[i];
+        }
+    }
+    return null;
+}
+
 function autoSetQuality() {
+    const settings = getYoutoobSettings();
+    const preferredQuality = settings.defaultQuality;
+
+    if (preferredQuality === 'auto') return;
+
     let attempts = 0;
     const interval = setInterval(() => {
         attempts++;
         const ytPlayer = document.querySelector('.html5-video-player');
+        const hasPlayerApi = ytPlayer?.getAvailableQualityLevels && ytPlayer?.setPlaybackQualityRange;
 
-        if (!ytPlayer || !ytPlayer.getAvailableQualityLevels || !ytPlayer.setPlaybackQualityRange) {
-            if (attempts >= AUTO_QUALITY_MAX_ATTEMPTS) {
-                clearInterval(interval);
-            }
+        if (!hasPlayerApi) {
+            if (attempts >= AUTO_QUALITY_MAX_ATTEMPTS) clearInterval(interval);
             return;
         }
 
         const availableQualities = ytPlayer.getAvailableQualityLevels();
-        if (!availableQualities || availableQualities.length === 0) {
-            if (attempts >= AUTO_QUALITY_MAX_ATTEMPTS) {
-                clearInterval(interval);
-            }
+        if (!availableQualities?.length) {
+            if (attempts >= AUTO_QUALITY_MAX_ATTEMPTS) clearInterval(interval);
             return;
         }
 
-        // Find the highest available quality
-        let targetQuality = null;
-        for (const quality of QUALITY_PRIORITY) {
-            if (availableQualities.includes(quality)) {
-                targetQuality = quality;
-                break;
-            }
-        }
-
+        const targetQuality = findBestAvailableQuality(availableQualities, preferredQuality);
         if (targetQuality) {
             ytPlayer.setPlaybackQualityRange(targetQuality, targetQuality);
-            clearInterval(interval);
-        } else if (attempts >= AUTO_QUALITY_MAX_ATTEMPTS) {
+        }
+        if (targetQuality || attempts >= AUTO_QUALITY_MAX_ATTEMPTS) {
             clearInterval(interval);
         }
     }, AUTO_QUALITY_POLL_INTERVAL_MS);
+}
+
+// =============================================================================
+// Auto Speed Setting
+// =============================================================================
+
+function autoSetSpeed(video) {
+    const settings = getYoutoobSettings();
+    const preferredSpeed = settings.defaultSpeed;
+
+    if (preferredSpeed !== DEFAULT_SPEED && video) {
+        video.playbackRate = preferredSpeed;
+    }
 }
 
 // =============================================================================

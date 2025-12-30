@@ -10,6 +10,7 @@ data class ShareRequest(val title: String?, val text: String?, val uri: String?)
 
 private const val YOUTOOB_SCHEME = "youtoob"
 private const val GOBACK_ACTION = "goback"
+private const val SETTINGS_ACTION = "settings"
 
 class GeckoSessionDelegate(
     private val onFullscreenChange: (Boolean) -> Unit,
@@ -19,7 +20,8 @@ class GeckoSessionDelegate(
     private val onPageLoaded: (GeckoSession) -> Unit = {},
     private val onUrlChange: (String, GeckoSession) -> Unit = { _, _ -> },
     private val onShareRequest: (ShareRequest, (Boolean) -> Unit) -> Unit = { _, callback -> callback(false) },
-    private val onGoBackRequest: (GeckoSession) -> Unit = {}
+    private val onGoBackRequest: (GeckoSession) -> Unit = {},
+    private val onSettingsRequest: () -> Unit = {}
 ) : GeckoSession.ContentDelegate,
     GeckoSession.PermissionDelegate,
     GeckoSession.ProgressDelegate,
@@ -118,6 +120,7 @@ class GeckoSessionDelegate(
             val action = uri.removePrefix("$YOUTOOB_SCHEME://")
             when (action) {
                 GOBACK_ACTION -> onGoBackRequest(session)
+                SETTINGS_ACTION -> onSettingsRequest()
             }
             // Block the navigation - we handled it
             return GeckoResult.fromValue(AllowOrDeny.DENY)
