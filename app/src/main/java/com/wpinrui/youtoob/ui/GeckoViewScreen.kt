@@ -23,11 +23,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.getSystemService
 import com.wpinrui.youtoob.gecko.GeckoRuntimeProvider
 import com.wpinrui.youtoob.gecko.GeckoSessionDelegate
+import com.wpinrui.youtoob.ui.navigation.NavDestination
 import com.wpinrui.youtoob.utils.PermissionBridge
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
-
-private const val YOUTUBE_MOBILE_URL = "https://m.youtube.com"
 
 private val HIDE_YOUTUBE_NAV_JS = """
 (function() {
@@ -129,7 +128,7 @@ fun GeckoViewScreen(
 
     DisposableEffect(Unit) {
         session.open(runtime)
-        session.loadUri(YOUTUBE_MOBILE_URL)
+        session.loadUri(requireNotNull(NavDestination.HOME.youtubeUrl))
         onDispose {
             session.close()
         }
