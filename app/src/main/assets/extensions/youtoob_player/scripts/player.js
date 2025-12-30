@@ -291,8 +291,9 @@
             left: 12px;
             right: 12px;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
             opacity: 0;
             transition: opacity 0.2s;
             pointer-events: none;
@@ -302,22 +303,14 @@
             opacity: 1;
             pointer-events: auto;
         }
-        .youtoob-time {
+        .youtoob-time-display {
             color: white;
             font-size: 12px;
             font-weight: 500;
-            min-width: 40px;
-            text-align: center;
             font-family: Roboto, Arial, sans-serif;
         }
-        .youtoob-time-current {
-            text-align: right;
-        }
-        .youtoob-time-duration {
-            text-align: left;
-        }
         .youtoob-seek-bar {
-            flex: 1;
+            width: 100%;
             height: 24px;
             display: flex;
             align-items: center;
@@ -406,14 +399,13 @@
             </div>
 
             <div class="youtoob-seek-container">
-                <span class="youtoob-time youtoob-time-current" id="youtoob-time-current">0:00</span>
+                <span class="youtoob-time-display" id="youtoob-time-display">0:00 / 0:00</span>
                 <div class="youtoob-seek-bar" id="youtoob-seek-bar">
                     <div class="youtoob-seek-track"></div>
                     <div class="youtoob-seek-buffer" id="youtoob-seek-buffer"></div>
                     <div class="youtoob-seek-progress" id="youtoob-seek-progress"></div>
                     <div class="youtoob-seek-thumb" id="youtoob-seek-thumb"></div>
                 </div>
-                <span class="youtoob-time youtoob-time-duration" id="youtoob-time-duration">0:00</span>
             </div>
 
             <div class="youtoob-bottom-bar">
@@ -744,17 +736,22 @@
         const seekProgress = document.getElementById('youtoob-seek-progress');
         const seekBuffer = document.getElementById('youtoob-seek-buffer');
         const seekThumb = document.getElementById('youtoob-seek-thumb');
-        const timeCurrent = document.getElementById('youtoob-time-current');
-        const timeDuration = document.getElementById('youtoob-time-duration');
+        const timeDisplay = document.getElementById('youtoob-time-display');
 
         let isSeeking = false;
+
+        function updateTimeDisplay() {
+            const current = formatTime(video.currentTime);
+            const duration = formatTime(video.duration);
+            timeDisplay.textContent = `${current} / ${duration}`;
+        }
 
         function updateProgress() {
             if (isSeeking) return;
             const percent = (video.currentTime / video.duration) * 100 || 0;
             seekProgress.style.width = percent + '%';
             seekThumb.style.left = percent + '%';
-            timeCurrent.textContent = formatTime(video.currentTime);
+            updateTimeDisplay();
         }
 
         function updateBuffer() {
@@ -765,10 +762,6 @@
             }
         }
 
-        function updateDuration() {
-            timeDuration.textContent = formatTime(video.duration);
-        }
-
         function seekToPosition(clientX) {
             const rect = seekBar.getBoundingClientRect();
             const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
@@ -776,7 +769,7 @@
             video.currentTime = time;
             seekProgress.style.width = (percent * 100) + '%';
             seekThumb.style.left = (percent * 100) + '%';
-            timeCurrent.textContent = formatTime(time);
+            updateTimeDisplay();
         }
 
         // Touch events for seeking
@@ -826,13 +819,13 @@
         // Video event listeners
         video.addEventListener('timeupdate', updateProgress);
         video.addEventListener('progress', updateBuffer);
-        video.addEventListener('loadedmetadata', updateDuration);
-        video.addEventListener('durationchange', updateDuration);
+        video.addEventListener('loadedmetadata', updateTimeDisplay);
+        video.addEventListener('durationchange', updateTimeDisplay);
 
         // Initial update
         updateProgress();
         updateBuffer();
-        updateDuration();
+        updateTimeDisplay();
     }
 
     // =============================================================================
