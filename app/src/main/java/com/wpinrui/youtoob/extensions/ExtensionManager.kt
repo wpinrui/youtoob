@@ -163,6 +163,6 @@ class ExtensionManager(
     }
 
     companion object {
-        private const val TAG = "ExtensionManager"
+        private const val TAG = "YTB_ExtMgr"
     }
 }

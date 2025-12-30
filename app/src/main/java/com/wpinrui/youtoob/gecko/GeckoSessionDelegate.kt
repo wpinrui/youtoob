@@ -10,10 +10,12 @@ class GeckoSessionDelegate(
     private val onMediaPlaying: () -> Unit,
     private val onMediaStopped: () -> Unit,
     private val permissionBridge: PermissionBridge,
-    private val onPageLoaded: (GeckoSession) -> Unit = {}
+    private val onPageLoaded: (GeckoSession) -> Unit = {},
+    private val onUrlChange: (String, GeckoSession) -> Unit = { _, _ -> }
 ) : GeckoSession.ContentDelegate,
     GeckoSession.PermissionDelegate,
     GeckoSession.ProgressDelegate,
+    GeckoSession.NavigationDelegate,
     MediaSession.Delegate {
 
     // ContentDelegate - Fullscreen handling
@@ -90,5 +92,10 @@ class GeckoSessionDelegate(
         if (success) {
             onPageLoaded(session)
         }
+    }
+
+    // NavigationDelegate - Track URL changes
+    override fun onLocationChange(session: GeckoSession, url: String?, perms: MutableList<GeckoSession.PermissionDelegate.ContentPermission>, hasUserGesture: Boolean) {
+        url?.let { onUrlChange(it, session) }
     }
 }

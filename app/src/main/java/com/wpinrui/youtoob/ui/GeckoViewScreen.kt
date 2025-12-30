@@ -1,10 +1,13 @@
 package com.wpinrui.youtoob.ui
 
 import android.app.Activity
+import android.content.Context
 import android.content.pm.ActivityInfo
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.os.Handler
+import android.os.Looper
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,28 +31,32 @@ import com.wpinrui.youtoob.utils.PermissionBridge
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
-private val HIDE_YOUTUBE_BOTTOM_NAV_JS = """
-(function() {
-    var style = document.getElementById('youtoob-custom-style');
-    if (!style) {
-        style = document.createElement('style');
-        style.id = 'youtoob-custom-style';
-        style.textContent = `
-            ytm-pivot-bar-renderer,
-            ytm-pivot-bar-item-renderer {
-                display: none !important;
-            }
-            ytm-app {
-                padding-bottom: 0 !important;
-            }
-        `;
-        document.head.appendChild(style);
+private const val SPA_NAVIGATION_DELAY_MS = 1000L
+
+private val HIDE_YOUTUBE_BOTTOM_NAV_CSS = """
+    ytm-pivot-bar-renderer,
+    ytm-pivot-bar-item-renderer {
+        display: none !important;
     }
-})();
+    ytm-app {
+        padding-bottom: 0 !important;
+    }
 """.trimIndent()
 
-private fun injectCustomStyles(session: GeckoSession) {
-    session.loadUri("javascript:$HIDE_YOUTUBE_BOTTOM_NAV_JS")
+private fun injectCss(session: GeckoSession) {
+    val cssScript = """
+        (function() {
+            var style = document.getElementById('youtoob-custom-style');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'youtoob-custom-style';
+                style.textContent = `$HIDE_YOUTUBE_BOTTOM_NAV_CSS`;
+                document.head.appendChild(style);
+            }
+        })();
+    """.trimIndent()
+
+    session.loadUri("javascript:$cssScript")
 }
 
 @Composable
@@ -61,6 +68,7 @@ fun GeckoViewScreen(
     val context = LocalContext.current
     val activity = context as? Activity
     var isFullscreen by remember { mutableStateOf(false) }
+    var currentUrl by remember { mutableStateOf("") }
 
     val audioManager = remember { context.getSystemService<AudioManager>() }
     val audioFocusRequest = remember {
@@ -112,7 +120,18 @@ fun GeckoViewScreen(
             },
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
-                injectCustomStyles(session)
+                injectCss(session)
+            },
+            onUrlChange = { url, session ->
+                val wasVideoPage = currentUrl.contains("/watch")
+                val isVideoPage = url.contains("/watch")
+                currentUrl = url
+                // Inject on SPA navigation to video page
+                if (isVideoPage && !wasVideoPage) {
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        injectCss(session)
+                    }, SPA_NAVIGATION_DELAY_MS)
+                }
             }
         )
     }
@@ -122,6 +141,7 @@ fun GeckoViewScreen(
             contentDelegate = delegate
             permissionDelegate = delegate
             progressDelegate = delegate
+            navigationDelegate = delegate
             mediaSessionDelegate = delegate
         }
     }
