@@ -43,6 +43,14 @@ function setupGestures(video, overlay) {
         }
     }
 
+    function resetGestureState() {
+        touchStartTime = 0;
+        isDragging = false;
+        dragDirection = null;
+        isPinching = false;
+        initialPinchDistance = 0;
+    }
+
     // isFullscreen() is defined in 06-helpers.js
 
     // Calculate distance between two touch points
@@ -260,11 +268,7 @@ function setupGestures(video, overlay) {
             const shouldFill = currentScale > midpoint;
             snapToFillMode(shouldFill);
 
-            isPinching = false;
-            initialPinchDistance = 0;
-            touchStartTime = 0;
-            isDragging = false;
-            dragDirection = null;
+            resetGestureState();
             return;
         }
 
@@ -294,23 +298,14 @@ function setupGestures(video, overlay) {
 
     document.addEventListener('touchcancel', () => {
         cancelLongPress();
-        touchStartTime = 0;
-        isDragging = false;
-        dragDirection = null;
-        isPinching = false;
-        initialPinchDistance = 0;
+        resetGestureState();
         resetTransform(true);
     }, { capture: true, passive: true });
 
     // Clean up transform AND reset all gesture state on fullscreen change
     function onFullscreenChange() {
         resetTransform(false);
-        // Reset ALL gesture state to start fresh
-        touchStartTime = 0;
-        isDragging = false;
-        dragDirection = null;
-        isPinching = false;
-        initialPinchDistance = 0;
+        resetGestureState();
         cancelLongPress();
     }
 
