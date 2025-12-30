@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,7 +30,11 @@ import org.mozilla.geckoview.GeckoView
 private const val YOUTUBE_MOBILE_URL = "https://m.youtube.com"
 
 @Composable
-fun GeckoViewScreen(modifier: Modifier = Modifier) {
+fun GeckoViewScreen(
+    modifier: Modifier = Modifier,
+    navigateToUrl: String? = null,
+    onFullscreenChange: (Boolean) -> Unit = {}
+) {
     val context = LocalContext.current
     val activity = context as? Activity
     var isFullscreen by remember { mutableStateOf(false) }
@@ -70,6 +75,7 @@ fun GeckoViewScreen(modifier: Modifier = Modifier) {
         GeckoSessionDelegate(
             onFullscreenChange = { fullscreen ->
                 isFullscreen = fullscreen
+                onFullscreenChange(fullscreen)
                 activity?.let {
                     setFullscreen(it, fullscreen)
                     setOrientation(it, fullscreen)
@@ -98,6 +104,12 @@ fun GeckoViewScreen(modifier: Modifier = Modifier) {
         session.loadUri(YOUTUBE_MOBILE_URL)
         onDispose {
             session.close()
+        }
+    }
+
+    LaunchedEffect(navigateToUrl) {
+        navigateToUrl?.let { url ->
+            session.loadUri(url)
         }
     }
 
