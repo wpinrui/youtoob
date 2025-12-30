@@ -8,8 +8,9 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
-import android.view.WindowInsets
-import android.view.WindowInsetsController
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
@@ -172,13 +173,13 @@ fun GeckoViewScreen(
 
 private fun setFullscreen(activity: Activity, fullscreen: Boolean) {
     val window = activity.window
-    val controller = window.insetsController ?: return
+    val controller = WindowCompat.getInsetsController(window, window.decorView)
 
     if (fullscreen) {
-        controller.hide(WindowInsets.Type.systemBars())
-        controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller.hide(WindowInsetsCompat.Type.systemBars())
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     } else {
-        controller.show(WindowInsets.Type.systemBars())
+        controller.show(WindowInsetsCompat.Type.systemBars())
     }
 }
 
