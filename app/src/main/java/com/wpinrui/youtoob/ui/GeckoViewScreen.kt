@@ -216,7 +216,7 @@ fun GeckoViewScreen(
     AndroidView(
         factory = { ctx ->
             GeckoView(ctx).apply {
-                setBackgroundColor(android.graphics.Color.BLACK)
+                coverUntilFirstPaint(android.graphics.Color.BLACK)
                 setSession(session)
             }
         },
