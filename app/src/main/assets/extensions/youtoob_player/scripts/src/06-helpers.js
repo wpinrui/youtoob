@@ -50,3 +50,13 @@ function getYouTubeFullscreenButton() {
         document.querySelector('[aria-label*="ull screen"]') ||
         document.querySelector('button.fullscreen-icon');
 }
+
+function getYouTubePrevButton() {
+    return document.querySelector('.ytp-prev-button') ||
+        document.querySelector('[aria-label*="Previous"]');
+}
+
+function getYouTubeNextButton() {
+    return document.querySelector('.ytp-next-button') ||
+        document.querySelector('[aria-label*="Next"]');
+}

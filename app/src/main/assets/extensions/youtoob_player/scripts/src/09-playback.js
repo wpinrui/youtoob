@@ -26,10 +26,8 @@ function setupPlaybackControls(video, playPauseBtn, controls) {
 
     // Check if YouTube's navigation buttons are available
     function updateNavButtonStates() {
-        const ytPrevBtn = document.querySelector('.ytp-prev-button') ||
-            document.querySelector('[aria-label*="Previous"]');
-        const ytNextBtn = document.querySelector('.ytp-next-button') ||
-            document.querySelector('[aria-label*="Next"]');
+        const ytPrevBtn = getYouTubePrevButton();
+        const ytNextBtn = getYouTubeNextButton();
 
         // Check if buttons exist and are enabled
         const prevDisabled = !ytPrevBtn || ytPrevBtn.disabled ||
@@ -48,8 +46,7 @@ function setupPlaybackControls(video, playPauseBtn, controls) {
     prevEl.addEventListener('click', (e) => {
         e.stopPropagation();
         if (prevEl.classList.contains('disabled')) return;
-        const prevBtn = document.querySelector('.ytp-prev-button') ||
-            document.querySelector('[aria-label*="Previous"]');
+        const prevBtn = getYouTubePrevButton();
         if (prevBtn) prevBtn.click();
         controls.show();
     });
@@ -57,8 +54,7 @@ function setupPlaybackControls(video, playPauseBtn, controls) {
     nextEl.addEventListener('click', (e) => {
         e.stopPropagation();
         if (nextEl.classList.contains('disabled')) return;
-        const nextBtn = document.querySelector('.ytp-next-button') ||
-            document.querySelector('[aria-label*="Next"]');
+        const nextBtn = getYouTubeNextButton();
         if (nextBtn) nextBtn.click();
         controls.show();
     });

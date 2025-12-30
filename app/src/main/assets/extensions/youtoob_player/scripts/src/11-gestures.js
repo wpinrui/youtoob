@@ -84,10 +84,8 @@ function setupGestures(video, overlay) {
         video.style.transition = 'transform 0.2s ease-out';
         if (fill) {
             const scale = getFillScale();
-            console.log('[YouToob] Snap to FILL - scale:', scale.toFixed(2));
             video.style.transform = `scale(${scale})`;
         } else {
-            console.log('[YouToob] Snap to FIT');
             video.style.transform = '';
         }
         video.style.transformOrigin = 'center center';
@@ -180,7 +178,6 @@ function setupGestures(video, overlay) {
         // Detect pinch start (2 fingers) - only in fullscreen
         if (e.touches.length === 2) {
             if (!isFullscreen()) return; // Ignore pinch in portrait
-            console.log('[YouToob] Pinch START detected, distance:', getTouchDistance(e.touches));
             isPinching = true;
             initialPinchDistance = getTouchDistance(e.touches);
             // Reset any ongoing swipe - 2 fingers = pinch only
@@ -205,7 +202,6 @@ function setupGestures(video, overlay) {
         if (e.touches.length >= 2 && isFullscreen()) {
             // Start pinch if not already
             if (!isPinching) {
-                console.log('[YouToob] Pinch detected in touchmove, distance:', getTouchDistance(e.touches));
                 isPinching = true;
                 initialPinchDistance = getTouchDistance(e.touches);
                 isDragging = false;
@@ -280,8 +276,6 @@ function setupGestures(video, overlay) {
 
             // Snap to fill if past midpoint, otherwise fit
             const shouldFill = currentScale > midpoint;
-            console.log('[YouToob] Pinch END - scale:', currentScale.toFixed(2),
-                'midpoint:', midpoint.toFixed(2), 'snap to:', shouldFill ? 'FILL' : 'FIT');
             snapToFillMode(shouldFill);
 
             isPinching = false;
@@ -292,24 +286,10 @@ function setupGestures(video, overlay) {
             return;
         }
 
-        if (touchStartTime === 0) {
-            console.log('[YouToob] touchend: touchStartTime is 0, returning early');
-            return;
-        }
+        if (touchStartTime === 0) return;
 
         const touchEndY = e.changedTouches[0].clientY;
         const deltaY = touchEndY - touchStartY;
-
-        console.log('[YouToob] touchend:', {
-            touchStartY,
-            touchEndY,
-            deltaY,
-            isDragging,
-            dragDirection,
-            isFS: isFullscreen(),
-            threshold: -COMPLETE_THRESHOLD,
-            wouldTrigger: dragDirection === 'up' && !isFullscreen() && deltaY < -COMPLETE_THRESHOLD
-        });
 
         // Reset touch state
         touchStartTime = 0;
@@ -318,14 +298,12 @@ function setupGestures(video, overlay) {
             // Check if drag was far enough to complete action
             if (dragDirection === 'up' && !isFullscreen() && deltaY < -COMPLETE_THRESHOLD) {
                 // Complete fullscreen enter
-                console.log('[YouToob] Calling completeFullscreenEnter');
                 completeFullscreenEnter();
             } else if (dragDirection === 'down' && isFullscreen() && deltaY > COMPLETE_THRESHOLD) {
                 // Complete fullscreen exit
                 completeFullscreenExit();
             } else {
                 // Snap back
-                console.log('[YouToob] Snapping back');
                 resetTransform(true);
             }
 
