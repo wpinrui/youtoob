@@ -83,9 +83,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
+            overflow: visible;
         }
         .youtoob-skip-indicator {
-            background: rgba(255,255,255,0.15);
+            background: rgba(0,0,0,0.3);
             border-radius: 50%;
             width: 100vh;
             height: 100vh;
@@ -96,6 +98,15 @@
             opacity: 0;
             transition: opacity 0.15s;
             pointer-events: none;
+            position: absolute;
+        }
+        #youtoob-left-zone .youtoob-skip-indicator {
+            right: 50%;
+            transform: translateX(-50%);
+        }
+        #youtoob-right-zone .youtoob-skip-indicator {
+            left: 50%;
+            transform: translateX(50%);
         }
         .youtoob-skip-indicator.show {
             opacity: 1;
