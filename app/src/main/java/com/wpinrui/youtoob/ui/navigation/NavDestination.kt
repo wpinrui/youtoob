@@ -38,7 +38,7 @@ enum class NavDestination(
         Icons.Filled.Person,
         Icons.Outlined.Person,
         "You",
-        "https://m.youtube.com/feed/you"
+        "https://m.youtube.com/feed/library"
     );
 
     val isYouTubeDestination: Boolean
