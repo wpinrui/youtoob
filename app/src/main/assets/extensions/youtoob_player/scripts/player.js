@@ -1,7 +1,21 @@
 (function () {
-    // Don't run if already injected
-    if (window.youtoobPlayerInjected) return;
-    window.youtoobPlayerInjected = true;
+    'use strict';
+
+    // =============================================================================
+    // GLOBAL STATE - stored on window to survive script re-injection
+    // =============================================================================
+
+    // Clean up ANY existing overlay immediately
+    document.querySelectorAll('#youtoob-controls').forEach(el => el.remove());
+
+    // Clean up any previous fullscreen handlers
+    if (window._youtoobFsHandler) {
+        document.removeEventListener('fullscreenchange', window._youtoobFsHandler);
+        document.removeEventListener('webkitfullscreenchange', window._youtoobFsHandler);
+    }
+    if (window._youtoobFsInterval) {
+        clearInterval(window._youtoobFsInterval);
+    }
 
     // =============================================================================
     // Constants
@@ -11,7 +25,6 @@
     const SKIP_INDICATOR_HIDE_MS = 600;
     const CONTROLS_AUTO_HIDE_MS = 3000;
     const SKIP_SECONDS = 10;
-    const SPA_NAVIGATION_DELAY_MS = 1000;
     const VIDEO_POLL_INTERVAL_MS = 500;
 
     const QUALITY_LABELS = {
@@ -77,6 +90,14 @@
             -webkit-touch-callout: none;
             -webkit-tap-highlight-color: transparent;
         }
+        #youtoob-controls.fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            z-index: 2147483647 !important;
+        }
         .youtoob-overlay-bg {
             position: absolute;
             top: 0;
@@ -108,6 +129,7 @@
             pointer-events: auto;
             z-index: 100000;
             overflow: visible;
+            touch-action: manipulation;
         }
         .youtoob-tap-zone {
             flex: 1;
@@ -116,6 +138,7 @@
             justify-content: center;
             position: relative;
             overflow: visible;
+            touch-action: manipulation;
         }
         .youtoob-skip-indicator {
             background: rgba(0,0,0,0.3);
@@ -585,11 +608,11 @@
         }
 
         qualityMenu.innerHTML = '';
-        qualities.forEach(q => {
-            const label = QUALITY_LABELS[q] || q;
+        qualities.forEach(quality => {
+            const label = QUALITY_LABELS[quality] || quality;
             const div = document.createElement('div');
             div.className = 'youtoob-menu-option';
-            div.dataset.quality = q;
+            div.dataset.quality = quality;
             div.textContent = label;
             qualityMenu.appendChild(div);
         });
@@ -606,7 +629,7 @@
                     ytPlayer.setPlaybackQuality(quality);
                 }
 
-                qualityMenu.querySelectorAll('.youtoob-menu-option').forEach(o => o.classList.remove('active'));
+                qualityMenu.querySelectorAll('.youtoob-menu-option').forEach(opt => opt.classList.remove('active'));
                 option.classList.add('active');
                 qualityMenu.classList.remove('show');
                 controls.show();
@@ -625,7 +648,7 @@
                 const speed = parseFloat(option.dataset.speed);
                 video.playbackRate = speed;
                 speedBtn.textContent = speed === 1 ? '1.0' : speed.toString();
-                document.querySelectorAll('#youtoob-speed-menu .youtoob-menu-option').forEach(o => o.classList.remove('active'));
+                document.querySelectorAll('#youtoob-speed-menu .youtoob-menu-option').forEach(opt => opt.classList.remove('active'));
                 option.classList.add('active');
                 speedMenu.classList.remove('show');
                 controls.show();
@@ -682,10 +705,7 @@
     // Fullscreen Setup
     // =============================================================================
 
-    // Store fullscreen handler globally so we can remove it on re-injection
-    let currentFullscreenHandler = null;
-
-    function setupFullscreen(overlay, playerContainer, controls) {
+    function setupFullscreen(overlay, controls) {
         document.getElementById('youtoob-fullscreen').addEventListener('click', (e) => {
             e.stopPropagation();
             const ytFullscreen = document.querySelector('.ytp-fullscreen-button') ||
@@ -698,43 +718,45 @@
                 if (videoEl) {
                     const fsElement = document.fullscreenElement || document.webkitFullscreenElement;
                     if (fsElement) {
-                        if (document.exitFullscreen) {
-                            document.exitFullscreen();
-                        } else if (document.webkitExitFullscreen) {
-                            document.webkitExitFullscreen();
-                        }
+                        (document.exitFullscreen || document.webkitExitFullscreen).call(document);
                     } else {
-                        if (videoEl.requestFullscreen) {
-                            videoEl.requestFullscreen();
-                        } else if (videoEl.webkitRequestFullscreen) {
-                            videoEl.webkitRequestFullscreen();
-                        }
+                        (videoEl.requestFullscreen || videoEl.webkitRequestFullscreen).call(videoEl);
                     }
                 }
             }
             controls.show();
         });
 
-        // Remove previous fullscreen handler if exists
-        if (currentFullscreenHandler) {
-            document.removeEventListener('fullscreenchange', currentFullscreenHandler);
-            document.removeEventListener('webkitfullscreenchange', currentFullscreenHandler);
+        function checkFullscreen() {
+            const fsElement = document.fullscreenElement || document.webkitFullscreenElement;
+            const isFullscreen = !!fsElement;
+            const wasFullscreen = overlay.classList.contains('fullscreen');
+
+            if (isFullscreen && !wasFullscreen) {
+                // Entering fullscreen - move overlay into fullscreen element
+                overlay.classList.add('fullscreen');
+                const target = fsElement.tagName === 'VIDEO' ? fsElement.parentElement : fsElement;
+                target.appendChild(overlay);
+            } else if (!isFullscreen && wasFullscreen) {
+                // Exiting fullscreen - move overlay back to player container
+                overlay.classList.remove('fullscreen');
+                if (window._youtoobPlayerContainer) {
+                    window._youtoobPlayerContainer.appendChild(overlay);
+                }
+            }
         }
 
-        currentFullscreenHandler = () => {
-            const fsElement = document.fullscreenElement || document.webkitFullscreenElement;
-            if (fsElement) {
-                fsElement.appendChild(overlay);
-                overlay.classList.add('fullscreen');
-            } else {
-                playerContainer.appendChild(overlay);
-                overlay.classList.remove('fullscreen');
-            }
+        // Store handler globally for cleanup on re-injection
+        window._youtoobFsHandler = () => {
+            checkFullscreen();
             controls.show();
         };
 
-        document.addEventListener('fullscreenchange', currentFullscreenHandler);
-        document.addEventListener('webkitfullscreenchange', currentFullscreenHandler);
+        document.addEventListener('fullscreenchange', window._youtoobFsHandler);
+        document.addEventListener('webkitfullscreenchange', window._youtoobFsHandler);
+
+        // Poll for fullscreen (YouTube sometimes doesn't trigger events)
+        window._youtoobFsInterval = setInterval(checkFullscreen, 500);
     }
 
     // =============================================================================
@@ -871,14 +893,15 @@
 
         ensureRelativePositioning(playerContainer);
 
-        // Remove ALL existing controls (may be in different containers during fullscreen)
-        document.querySelectorAll('#youtoob-controls').forEach(el => el.remove());
-
-        // Create and append overlay
+        // Create and append overlay (cleanup already done at script start)
         const overlay = document.createElement('div');
         overlay.id = 'youtoob-controls';
         overlay.innerHTML = getOverlayHTML();
         playerContainer.appendChild(overlay);
+
+        // Store reference globally for cleanup on re-injection
+        window._youtoobOverlay = overlay;
+        window._youtoobPlayerContainer = playerContainer;
 
         // Get element references
         const elements = {
@@ -907,6 +930,21 @@
             video, elements.skipForwardIndicator, elements.skipForwardText, 'forward', controls
         );
 
+        // Touch handlers (touchstart for immediate response)
+        elements.leftZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleLeftTap(e);
+        }, { passive: false });
+        elements.rightZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleRightTap(e);
+        }, { passive: false });
+        elements.centerZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            controls.toggle();
+        }, { passive: false });
+        // Click handlers for desktop
         elements.leftZone.addEventListener('click', handleLeftTap);
         elements.rightZone.addEventListener('click', handleRightTap);
         elements.centerZone.addEventListener('click', (e) => {
@@ -919,7 +957,7 @@
         setupQualityDisplay(video, elements.qualityBtn);
         setupQualityMenu(elements.qualityMenu, controls);
         setupSpeedMenu(video, elements.speedBtn, elements.speedMenu, controls);
-        setupFullscreen(overlay, playerContainer, controls);
+        setupFullscreen(overlay, controls);
         setupSeekBar(video, controls);
 
         // Menu toggle buttons
@@ -939,28 +977,12 @@
 
         // Show controls initially
         controls.show();
-
-        console.log('Youtoob custom player controls injected');
     }
 
     // =============================================================================
     // Initialize
     // =============================================================================
 
+    // Just create controls - content_script.js handles SPA navigation re-injection
     waitForVideo(createCustomControls);
-
-    // Re-inject on navigation (YouTube SPA)
-    let lastUrl = location.href;
-    new MutationObserver(() => {
-        if (location.href !== lastUrl) {
-            lastUrl = location.href;
-            if (location.href.includes('/watch')) {
-                window.youtoobPlayerInjected = false;
-                setTimeout(() => {
-                    window.youtoobPlayerInjected = true;
-                    waitForVideo(createCustomControls);
-                }, SPA_NAVIGATION_DELAY_MS);
-            }
-        }
-    }).observe(document.body, { subtree: true, childList: true });
 })();

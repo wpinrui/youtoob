@@ -15,17 +15,13 @@
 
     // Inject the main player script
     function injectPlayerScript() {
-        if (document.getElementById('youtoob-player-script')) return;
+        // Remove old script to force re-execution
+        const oldScript = document.getElementById('youtoob-player-script');
+        if (oldScript) oldScript.remove();
 
         const script = document.createElement('script');
         script.id = 'youtoob-player-script';
         script.src = browser.runtime.getURL('scripts/player.js');
-        script.addEventListener('load', () => {
-            console.log('[YouToob] Player script loaded');
-        });
-        script.addEventListener('error', (e) => {
-            console.error('[YouToob] Failed to load player script', e);
-        });
         (document.head || document.documentElement).appendChild(script);
     }
 
