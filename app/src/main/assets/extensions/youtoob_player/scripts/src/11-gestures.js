@@ -91,39 +91,33 @@ function setupGestures(video, overlay) {
         video.style.transformOrigin = 'center center';
     }
 
+    // Apply shrink/translate transform for swipe-down gesture (same in portrait and fullscreen)
+    function applySwipeDownTransform(deltaY) {
+        const translateY = Math.min(deltaY - DRAG_THRESHOLD, COMPLETE_THRESHOLD * EXIT_FULLSCREEN_TRANSLATE_LIMIT);
+        const scale = 1 - (translateY / (COMPLETE_THRESHOLD * EXIT_FULLSCREEN_SCALE_DIVISOR));
+        video.style.transition = 'none';
+        video.style.transform = `translateY(${translateY}px) scale(${Math.max(scale, EXIT_FULLSCREEN_MIN_SCALE)})`;
+        video.style.transformOrigin = 'center top';
+    }
+
     // Apply progressive transform during drag
     function applyDragTransform(deltaY) {
         const container = getPlayerContainer();
         if (!container) return;
 
-        if (!isFullscreen()) {
-            // Portrait mode: dragging UP to enter fullscreen
-            if (deltaY < -DRAG_THRESHOLD) {
-                const progress = Math.min(Math.abs(deltaY + DRAG_THRESHOLD) / COMPLETE_THRESHOLD, 1);
-                const scale = 1 + (progress * DRAG_SCALE_FACTOR);
-                const translateY = -progress * DRAG_TRANSLATE_Y;
-                video.style.transition = 'none';
-                video.style.transform = `scale(${scale}) translateY(${translateY}px)`;
-                video.style.transformOrigin = 'center center';
-            }
-            // Portrait mode: dragging DOWN to go back to home
-            if (deltaY > DRAG_THRESHOLD) {
-                const translateY = Math.min(deltaY - DRAG_THRESHOLD, COMPLETE_THRESHOLD * EXIT_FULLSCREEN_TRANSLATE_LIMIT);
-                const scale = 1 - (translateY / (COMPLETE_THRESHOLD * EXIT_FULLSCREEN_SCALE_DIVISOR));
-                video.style.transition = 'none';
-                video.style.transform = `translateY(${translateY}px) scale(${Math.max(scale, EXIT_FULLSCREEN_MIN_SCALE)})`;
-                video.style.transformOrigin = 'center top';
-            }
-        } else {
-            // Fullscreen mode: dragging DOWN to exit
-            // Translate video down as user drags
-            if (deltaY > DRAG_THRESHOLD) {
-                const translateY = Math.min(deltaY - DRAG_THRESHOLD, COMPLETE_THRESHOLD * EXIT_FULLSCREEN_TRANSLATE_LIMIT);
-                const scale = 1 - (translateY / (COMPLETE_THRESHOLD * EXIT_FULLSCREEN_SCALE_DIVISOR));
-                video.style.transition = 'none';
-                video.style.transform = `translateY(${translateY}px) scale(${Math.max(scale, EXIT_FULLSCREEN_MIN_SCALE)})`;
-                video.style.transformOrigin = 'center top';
-            }
+        // Portrait mode: dragging UP to enter fullscreen
+        if (!isFullscreen() && deltaY < -DRAG_THRESHOLD) {
+            const progress = Math.min(Math.abs(deltaY + DRAG_THRESHOLD) / COMPLETE_THRESHOLD, 1);
+            const scale = 1 + (progress * DRAG_SCALE_FACTOR);
+            const translateY = -progress * DRAG_TRANSLATE_Y;
+            video.style.transition = 'none';
+            video.style.transform = `scale(${scale}) translateY(${translateY}px)`;
+            video.style.transformOrigin = 'center center';
+        }
+
+        // Both modes: dragging DOWN (portrait: go back, fullscreen: exit)
+        if (deltaY > DRAG_THRESHOLD) {
+            applySwipeDownTransform(deltaY);
         }
     }
 
