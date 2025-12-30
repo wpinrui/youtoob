@@ -159,10 +159,10 @@ function setupGestures(video, overlay) {
         toggleFullscreen();
     }
 
-    // Navigate to YouTube home (for swipe down in portrait)
-    function navigateToHome() {
+    // Navigate back (for swipe down in portrait)
+    function navigateBack() {
         resetTransform(false);
-        window.location.href = 'https://m.youtube.com';
+        history.back();
     }
 
     // Attach to document instead of overlay - overlay moves during fullscreen which corrupts touch handling
@@ -298,8 +298,8 @@ function setupGestures(video, overlay) {
                 // Portrait: swipe up → enter fullscreen
                 completeFullscreenGesture();
             } else if (dragDirection === 'down' && !isFullscreen() && deltaY > COMPLETE_THRESHOLD) {
-                // Portrait: swipe down → go to home
-                navigateToHome();
+                // Portrait: swipe down → go back
+                navigateBack();
             } else if (dragDirection === 'down' && isFullscreen() && deltaY > COMPLETE_THRESHOLD) {
                 // Fullscreen: swipe down → exit fullscreen
                 completeFullscreenGesture();
