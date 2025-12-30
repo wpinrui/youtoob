@@ -122,40 +122,12 @@ function setupGestures(video, overlay) {
         // Must request fullscreen IMMEDIATELY during user gesture - no setTimeout!
         resetTransform(false);
 
-        // Try clicking YouTube's native fullscreen button first
-        // This works more reliably than requestFullscreen() after fullscreen cycles
-        const ytFullscreen = document.querySelector('.ytp-fullscreen-button') ||
-            document.querySelector('[aria-label*="ull screen"]') ||
-            document.querySelector('button.fullscreen-icon');
-
-        if (ytFullscreen) {
-            console.log('[YouToob] Clicking YouTube fullscreen button');
-            ytFullscreen.click();
-            return;
-        }
-
-        // Fallback to API if YouTube button not found
-        const videoEl = document.querySelector('video');
-        if (!videoEl) {
-            console.log('[YouToob] No video element found');
-            return;
-        }
-
-        const target = videoEl.closest('.html5-video-player')
-                    || videoEl.closest('[id*="player"]')
-                    || videoEl.parentElement;
-
-        console.log('[YouToob] Requesting fullscreen on:', target?.tagName, target?.id, target?.className);
-
-        let promise;
-        if (target.requestFullscreen) {
-            promise = target.requestFullscreen();
-        } else if (target.webkitRequestFullscreen) {
-            promise = target.webkitRequestFullscreen();
-        }
-
-        if (promise && promise.catch) {
-            promise.catch(err => console.log('[YouToob] Fullscreen error:', err.name, err.message));
+        // Click our own fullscreen button - this goes through the same trusted path
+        // as a manual tap (which the user confirmed works reliably)
+        const ourFsBtn = document.getElementById('youtoob-fullscreen');
+        if (ourFsBtn) {
+            console.log('[YouToob] Clicking our fullscreen button');
+            ourFsBtn.click();
         }
     }
 
@@ -163,10 +135,13 @@ function setupGestures(video, overlay) {
     function completeFullscreenExit() {
         // Must exit fullscreen IMMEDIATELY during user gesture - no setTimeout!
         resetTransform(false);
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
+
+        // Use the same path as the button - click our fullscreen button
+        // which handles the toggle correctly
+        const ourFsBtn = document.getElementById('youtoob-fullscreen');
+        if (ourFsBtn) {
+            console.log('[YouToob] Clicking our fullscreen button to exit');
+            ourFsBtn.click();
         }
     }
 
