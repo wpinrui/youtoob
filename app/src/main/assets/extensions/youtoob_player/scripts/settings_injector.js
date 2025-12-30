@@ -12,24 +12,28 @@
     const INJECTION_DELAY_MS = 500;
 
     function isSettingsPage() {
-        return location.pathname.includes('/account');
+        return location.pathname.includes('/account') ||
+               location.pathname.includes('/select_site');
     }
 
     function findSettingsContainer() {
-        // YouTube mobile settings page structure
-        // Look for the settings menu container
-        const containers = document.querySelectorAll('ytm-section-list-renderer, ytm-settings-renderer, .settings-list');
-        for (const container of containers) {
-            if (container.querySelector('ytm-compact-link-renderer, ytm-settings-item-renderer, .menu-item')) {
-                return container;
-            }
+        // Try various YouTube mobile settings containers
+        const selectors = [
+            'ytm-section-list-renderer',
+            'ytm-settings-renderer',
+            '.settings-list',
+            'ytm-browse',
+            'ytm-single-column-browse-results-renderer',
+            '#contents',
+            'ytm-app [role="main"]',
+            'ytm-app'
+        ];
+
+        for (const selector of selectors) {
+            const el = document.querySelector(selector);
+            if (el) return el;
         }
-        // Fallback: look for any list of settings-like items
-        const settingsList = document.querySelector('[role="list"], .list-container');
-        if (settingsList && settingsList.querySelector('a, button')) {
-            return settingsList;
-        }
-        return null;
+        return document.body;
     }
 
     function createSettingsItem() {
@@ -52,8 +56,11 @@
             <span style="font-size: 14px; color: inherit;">YouToob Settings</span>
         `;
 
-        item.addEventListener('click', () => {
-            window.location.href = 'youtoob://settings';
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Use replace() to avoid adding to history (prevents re-triggering on back/forward)
+            window.location.replace('youtoob://settings');
         });
 
         item.addEventListener('touchstart', () => {
