@@ -111,10 +111,9 @@ function setupTopBar(video, controls) {
         disableYouTubeAutoplay();
     }, AUTOPLAY_POLL_INTERVAL_MS);
 
-    // Initial attempts
+    // Initial attempts with retries
     disableYouTubeAutoplay();
-    setTimeout(disableYouTubeAutoplay, 500);
-    setTimeout(disableYouTubeAutoplay, 2000);
+    AUTOPLAY_RETRY_DELAYS_MS.forEach(delay => setTimeout(disableYouTubeAutoplay, delay));
 
     // Clean up interval on page unload
     window.addEventListener('beforeunload', () => clearInterval(autoplayCheckInterval));
