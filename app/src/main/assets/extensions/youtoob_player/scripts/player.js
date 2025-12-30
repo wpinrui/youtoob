@@ -93,24 +93,32 @@
             border-radius: 50%;
             width: 100vh;
             height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             opacity: 0;
             transition: opacity 0.15s;
             pointer-events: none;
             position: absolute;
         }
+        .youtoob-skip-content {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
         #youtoob-left-zone .youtoob-skip-indicator {
             left: 0;
             transform: translateX(-50%);
-            padding-left: 55%;
+        }
+        #youtoob-left-zone .youtoob-skip-content {
+            right: 25%;
         }
         #youtoob-right-zone .youtoob-skip-indicator {
             right: 0;
             transform: translateX(50%);
-            padding-right: 55%;
+        }
+        #youtoob-right-zone .youtoob-skip-content {
+            left: 25%;
         }
         .youtoob-skip-indicator.show {
             opacity: 1;
@@ -231,15 +239,19 @@
             <div class="youtoob-tap-zones">
                 <div class="youtoob-tap-zone" id="youtoob-left-zone">
                     <div class="youtoob-skip-indicator" id="youtoob-skip-back">
-                        <span class="youtoob-skip-arrows">◀◀◀</span>
-                        <span id="youtoob-skip-back-text">${SKIP_SECONDS} seconds</span>
+                        <div class="youtoob-skip-content">
+                            <span class="youtoob-skip-arrows">◀◀◀</span>
+                            <span id="youtoob-skip-back-text">${SKIP_SECONDS} seconds</span>
+                        </div>
                     </div>
                 </div>
                 <div class="youtoob-tap-zone" id="youtoob-center-zone"></div>
                 <div class="youtoob-tap-zone" id="youtoob-right-zone">
                     <div class="youtoob-skip-indicator" id="youtoob-skip-forward">
-                        <span class="youtoob-skip-arrows">▶▶▶</span>
-                        <span id="youtoob-skip-forward-text">${SKIP_SECONDS} seconds</span>
+                        <div class="youtoob-skip-content">
+                            <span class="youtoob-skip-arrows">▶▶▶</span>
+                            <span id="youtoob-skip-forward-text">${SKIP_SECONDS} seconds</span>
+                        </div>
                     </div>
                 </div>
             </div>
