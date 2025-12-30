@@ -12,9 +12,15 @@ function setupGestures(video, overlay) {
     let isDragging = false;
     let dragDirection = null; // 'up' or 'down'
 
+    // Pinch gesture state
+    let isPinching = false;
+    let initialPinchDistance = 0;
+    let isFillMode = false; // false = fit (contain), true = fill (cover)
+
     const DRAG_THRESHOLD = 30;  // Min distance to start progressive drag
     const COMPLETE_THRESHOLD = 100;  // Distance to complete fullscreen toggle
     const LONG_PRESS_DELAY = 400;  // ms to trigger long press
+    const PINCH_THRESHOLD = 50;  // Min distance change to toggle fill mode
 
     // Get the video element for transforms
     function getVideoElement() {
@@ -48,6 +54,19 @@ function setupGestures(video, overlay) {
     // Check if we're in fullscreen
     function isFullscreen() {
         return !!(document.fullscreenElement || document.webkitFullscreenElement);
+    }
+
+    // Calculate distance between two touch points
+    function getTouchDistance(touches) {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // Toggle fill mode (object-fit: cover vs contain)
+    function setFillMode(fill) {
+        isFillMode = fill;
+        video.style.objectFit = fill ? 'cover' : 'contain';
     }
 
     // Apply progressive transform during drag
@@ -149,6 +168,14 @@ function setupGestures(video, overlay) {
             e.target.closest('.youtoob-fullscreen-btn') ||
             e.target.closest('.youtoob-menu')) return;
 
+        // Detect pinch start (2 fingers)
+        if (e.touches.length === 2) {
+            isPinching = true;
+            initialPinchDistance = getTouchDistance(e.touches);
+            cancelLongPress();
+            return;
+        }
+
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
         touchStartTime = Date.now();
@@ -160,6 +187,26 @@ function setupGestures(video, overlay) {
     }, { capture: true, passive: true });
 
     overlay.addEventListener('touchmove', (e) => {
+        // Handle pinch gesture
+        if (isPinching && e.touches.length === 2) {
+            const currentDistance = getTouchDistance(e.touches);
+            const delta = currentDistance - initialPinchDistance;
+
+            // Toggle fill mode when pinch exceeds threshold
+            if (Math.abs(delta) > PINCH_THRESHOLD) {
+                if (delta > 0 && !isFillMode) {
+                    // Pinch out (spread) - fill mode
+                    setFillMode(true);
+                    initialPinchDistance = currentDistance; // Reset to prevent repeated toggles
+                } else if (delta < 0 && isFillMode) {
+                    // Pinch in - fit mode
+                    setFillMode(false);
+                    initialPinchDistance = currentDistance;
+                }
+            }
+            return;
+        }
+
         if (touchStartTime === 0) return;
 
         const currentX = e.touches[0].clientX;
@@ -196,6 +243,13 @@ function setupGestures(video, overlay) {
     overlay.addEventListener('touchend', (e) => {
         cancelLongPress();
 
+        // Reset pinch state
+        if (isPinching) {
+            isPinching = false;
+            initialPinchDistance = 0;
+            return;
+        }
+
         if (touchStartTime === 0) return;
 
         const touchEndY = e.changedTouches[0].clientY;
@@ -227,6 +281,8 @@ function setupGestures(video, overlay) {
         touchStartTime = 0;
         isDragging = false;
         dragDirection = null;
+        isPinching = false;
+        initialPinchDistance = 0;
         resetTransform(true);
     }, { capture: true, passive: true });
 
