@@ -40,12 +40,19 @@ private val HIDE_YOUTUBE_BOTTOM_NAV_CSS = """
 """.trimIndent()
 
 private fun loadCustomPlayerJs(context: Context): String {
-    return context.assets.open("js/custom_player.js").bufferedReader().readText()
+    return try {
+        context.assets.open("js/custom_player.js").bufferedReader().use { it.readText() }
+    } catch (e: Exception) {
+        android.util.Log.e("Youtoob", "Failed to load custom_player.js", e)
+        ""
+    }
 }
 
-private fun injectCustomStyles(session: GeckoSession, context: Context, isVideoPage: Boolean) {
-    // Inject CSS to hide YouTube's bottom nav
-    val cssInjection = """
+private var cachedPlayerJs: String? = null
+
+private fun injectScripts(session: GeckoSession, context: Context, isVideoPage: Boolean) {
+    // CSS injection
+    val cssScript = """
         (function() {
             var style = document.getElementById('youtoob-custom-style');
             if (!style) {
@@ -56,13 +63,52 @@ private fun injectCustomStyles(session: GeckoSession, context: Context, isVideoP
             }
         })();
     """.trimIndent()
-    session.loadUri("javascript:$cssInjection")
 
-    // Inject custom player controls on video pages
-    if (isVideoPage) {
-        val playerJs = loadCustomPlayerJs(context)
-        session.loadUri("javascript:$playerJs")
+    if (!isVideoPage) {
+        session.loadUri("javascript:$cssScript")
+        return
     }
+
+    // Cache the player JS
+    if (cachedPlayerJs == null) {
+        cachedPlayerJs = loadCustomPlayerJs(context)
+    }
+    val playerJs = cachedPlayerJs ?: ""
+
+    if (playerJs.isEmpty()) {
+        session.loadUri("javascript:$cssScript")
+        return
+    }
+
+    // Convert to Base64 to avoid encoding issues
+    val base64Js = android.util.Base64.encodeToString(
+        playerJs.toByteArray(Charsets.UTF_8),
+        android.util.Base64.NO_WRAP
+    )
+
+    val combinedScript = """
+        (function() {
+            // CSS
+            var style = document.getElementById('youtoob-custom-style');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'youtoob-custom-style';
+                style.textContent = `$HIDE_YOUTUBE_BOTTOM_NAV_CSS`;
+                document.head.appendChild(style);
+            }
+            // Player - decode from base64 and eval
+            if (!window.youtoobPlayerInjected) {
+                try {
+                    var code = atob('$base64Js');
+                    eval(code);
+                } catch(e) {
+                    console.error('Youtoob player injection failed:', e);
+                }
+            }
+        })();
+    """.trimIndent()
+
+    session.loadUri("javascript:$combinedScript")
 }
 
 @Composable
@@ -126,7 +172,7 @@ fun GeckoViewScreen(
             },
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
-                injectCustomStyles(session, context, currentUrl.contains("/watch"))
+                injectScripts(session, context, currentUrl.contains("/watch"))
             },
             onUrlChange = { url ->
                 currentUrl = url
