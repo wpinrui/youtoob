@@ -87,6 +87,7 @@
             opacity: 0;
             transition: opacity 0.2s;
             pointer-events: none;
+            z-index: 1;
         }
         #youtoob-controls.show-controls .youtoob-overlay-bg {
             opacity: 1;
