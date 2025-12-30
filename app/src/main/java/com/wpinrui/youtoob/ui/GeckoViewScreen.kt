@@ -57,83 +57,21 @@ private var cachedPlayerJs: String? = null
 private fun injectScripts(session: GeckoSession, context: Context, isVideoPage: Boolean) {
     android.util.Log.d(TAG, "injectScripts called, isVideoPage=$isVideoPage")
 
-    // CSS injection
+    // CSS injection only - player controls via javascript: URI is too limited in GeckoView
     val cssScript = """
         (function() {
-            console.log('[YoutoobPlayer] CSS injection running');
             var style = document.getElementById('youtoob-custom-style');
             if (!style) {
                 style = document.createElement('style');
                 style.id = 'youtoob-custom-style';
                 style.textContent = `$HIDE_YOUTUBE_BOTTOM_NAV_CSS`;
                 document.head.appendChild(style);
-                console.log('[YoutoobPlayer] CSS style added');
-            } else {
-                console.log('[YoutoobPlayer] CSS style already exists');
             }
         })();
     """.trimIndent()
 
-    if (!isVideoPage) {
-        android.util.Log.d(TAG, "Not a video page, injecting CSS only")
-        session.loadUri("javascript:$cssScript")
-        return
-    }
-
-    // Cache the player JS
-    if (cachedPlayerJs == null) {
-        cachedPlayerJs = loadCustomPlayerJs(context)
-    }
-    val playerJs = cachedPlayerJs ?: ""
-
-    if (playerJs.isEmpty()) {
-        android.util.Log.e(TAG, "Player JS is empty, injecting CSS only")
-        session.loadUri("javascript:$cssScript")
-        return
-    }
-
-    android.util.Log.d(TAG, "Player JS loaded, ${playerJs.length} chars")
-
-    // Convert to Base64 to avoid encoding issues
-    val base64Js = android.util.Base64.encodeToString(
-        playerJs.toByteArray(Charsets.UTF_8),
-        android.util.Base64.NO_WRAP
-    )
-    android.util.Log.d(TAG, "Base64 encoded, ${base64Js.length} chars")
-
-    // Inject CSS first
     session.loadUri("javascript:$cssScript")
-
-    // Inject player in chunks to avoid URI length limit
-    val chunkSize = 8000 // Safe chunk size for URI
-    val chunks = base64Js.chunked(chunkSize)
-
-    android.util.Log.d(TAG, "Injecting player in ${chunks.size} chunks")
-
-    // Initialize chunks array
-    session.loadUri("javascript:window._ypc=[]")
-
-    // Add each chunk
-    chunks.forEachIndexed { index, chunk ->
-        session.loadUri("javascript:window._ypc.push('$chunk')")
-    }
-
-    // Join chunks and execute
-    val execScript = """
-        (function() {
-            if (window.youtoobPlayerInjected) return;
-            try {
-                var code = atob(window._ypc.join(''));
-                eval(code);
-                console.log('[YoutoobPlayer] Injected successfully');
-            } catch(e) {
-                console.error('[YoutoobPlayer] Injection failed:', e);
-            }
-            delete window._ypc;
-        })();
-    """.trimIndent()
-    session.loadUri("javascript:$execScript")
-    android.util.Log.d(TAG, "loadUri called")
+    android.util.Log.d(TAG, "CSS injected")
 }
 
 @Composable
