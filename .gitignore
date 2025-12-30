@@ -2,6 +2,9 @@
 .claude/
 agents/
 
+# Generated files
+app/src/main/assets/extensions/youtoob_player/scripts/player.js
+
 # Android/Gradle
 *.iml
 .gradle

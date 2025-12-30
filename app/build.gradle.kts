@@ -4,6 +4,16 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// Build YouToob player extension before processing assets
+tasks.register<Exec>("buildPlayerExtension") {
+    workingDir = file("src/main/assets/extensions/youtoob_player/scripts")
+    commandLine("node", "build.js")
+}
+
+tasks.named("preBuild") {
+    dependsOn("buildPlayerExtension")
+}
+
 android {
     namespace = "com.wpinrui.youtoob"
     compileSdk = 36
