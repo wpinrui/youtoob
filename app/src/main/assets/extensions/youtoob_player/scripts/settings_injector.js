@@ -17,43 +17,52 @@
     }
 
     function findSettingsContainer() {
-        // Try various YouTube mobile settings containers
+        // Target the ytm-settings container specifically
+        const ytmSettings = document.querySelector('ytm-settings.cairo-settings');
+        if (ytmSettings) return ytmSettings;
+
+        // Fallback selectors
         const selectors = [
+            'ytm-settings',
             'ytm-section-list-renderer',
-            'ytm-settings-renderer',
-            '.settings-list',
-            'ytm-browse',
-            'ytm-single-column-browse-results-renderer',
-            '#contents',
-            'ytm-app [role="main"]',
-            'ytm-app'
+            'ytm-settings-renderer'
         ];
 
         for (const selector of selectors) {
             const el = document.querySelector(selector);
             if (el) return el;
         }
-        return document.body;
+        return null;
     }
 
     function createSettingsItem() {
+        // Match YouTube's native settings item structure
         const item = document.createElement('div');
         item.id = SETTINGS_ID;
-        item.style.cssText = `
-            padding: 16px 24px;
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            background: transparent;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        `;
+        item.className = 'setting-generic-category cairo-settings';
+        item.setAttribute('role', 'button');
+        item.setAttribute('tabindex', '0');
 
+        // Use YouTube's gear icon SVG (same as General settings)
         item.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 24px; opacity: 0.9;">
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-            </svg>
-            <span style="font-size: 14px; color: inherit;">YouToob Settings</span>
+            <div class="setting-generic-category-block">
+                <div class="setting-generic-category-icon">
+                    <c3-icon fill-icon="false">
+                        <span class="yt-icon-shape ytSpecIconShapeHost">
+                            <div style="width: 100%; height: 100%; display: block; fill: currentcolor;">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" focusable="false" aria-hidden="true" style="pointer-events: none; display: inherit; width: 100%; height: 100%;">
+                                    <path d="M12.844 1h-1.687a2 2 0 00-1.962 1.616 3 3 0 01-3.92 2.263 2 2 0 00-2.38.891l-.842 1.46a2 2 0 00.417 2.507 3 3 0 010 4.525 2 2 0 00-.417 2.507l.843 1.46a2 2 0 002.38.892 3.001 3.001 0 013.918 2.263A2 2 0 0011.157 23h1.686a2 2 0 001.963-1.615 3.002 3.002 0 013.92-2.263 2 2 0 002.38-.892l.842-1.46a2 2 0 00-.418-2.507 3 3 0 010-4.526 2 2 0 00.418-2.508l-.843-1.46a2 2 0 00-2.38-.891 3 3 0 01-3.919-2.263A2 2 0 0012.844 1Zm-1.767 2.347a6 6 0 00.08-.347h1.687a4.98 4.98 0 002.407 3.37 4.98 4.98 0 004.122.4l.843 1.46A4.98 4.98 0 0018.5 12a4.98 4.98 0 001.716 3.77l-.843 1.46a4.98 4.98 0 00-4.123.4A4.979 4.979 0 0012.843 21h-1.686a4.98 4.98 0 00-2.408-3.371 4.999 4.999 0 00-4.12-.399l-.844-1.46A4.979 4.979 0 005.5 12a4.98 4.98 0 00-1.715-3.77l.842-1.459a4.98 4.98 0 004.123-.399 4.981 4.981 0 002.327-3.025ZM16 12a4 4 0 11-7.999 0 4 4 0 018 0Zm-4 2a2 2 0 100-4 2 2 0 000 4Z"></path>
+                                </svg>
+                            </div>
+                        </span>
+                    </c3-icon>
+                </div>
+                <div class="setting-generic-category-title-block cairo-settings">
+                    <div class="title-text">
+                        <span class="yt-core-attributed-string" role="text">YouToob Settings</span>
+                    </div>
+                </div>
+            </div>
         `;
 
         item.addEventListener('click', (e) => {
@@ -61,14 +70,6 @@
             e.stopPropagation();
             // Use replace() to avoid adding to history (prevents re-triggering on back/forward)
             window.location.replace('youtoob://settings');
-        });
-
-        item.addEventListener('touchstart', () => {
-            item.style.background = 'rgba(255,255,255,0.1)';
-        });
-
-        item.addEventListener('touchend', () => {
-            item.style.background = 'transparent';
         });
 
         return item;
