@@ -10,7 +10,7 @@ const SKIP_SECONDS = 10;
 const VIDEO_POLL_INTERVAL_MS = 500;
 
 const QUALITY_LABELS = {
-    'hd2160': '4K (2160p)',
+    'hd2160': '2160p (4K)',
     'hd1440': '1440p',
     'hd1080': '1080p (FHD)',
     'hd720': '720p (HD)',
