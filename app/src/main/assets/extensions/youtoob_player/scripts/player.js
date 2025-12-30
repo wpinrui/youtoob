@@ -26,12 +26,21 @@
 
     // Create custom controls overlay
     function createCustomControls(video) {
-        // Find the player container
-        const playerContainer = document.querySelector('.html5-video-player') ||
-                               document.querySelector('ytm-player') ||
+        // Find the player container - prefer the video's direct parent for mobile
+        const playerContainer = document.querySelector('ytm-player') ||
+                               document.querySelector('.html5-video-player') ||
                                video.parentElement;
 
-        if (!playerContainer) return;
+        if (!playerContainer) {
+            console.log('[YouToob] No player container found');
+            return;
+        }
+
+        // Ensure container has positioning for absolute children
+        const containerStyle = getComputedStyle(playerContainer);
+        if (containerStyle.position === 'static') {
+            playerContainer.style.position = 'relative';
+        }
 
         // Remove existing custom controls if any
         const existing = document.getElementById('youtoob-controls');
@@ -42,13 +51,29 @@
         overlay.id = 'youtoob-controls';
         overlay.innerHTML = `
             <style>
+                /* Hide YouTube's native mobile controls */
+                .player-controls-content,
+                .ytp-chrome-bottom,
+                .ytp-chrome-top,
+                .ytp-gradient-bottom,
+                .ytp-gradient-top,
+                .ytp-bezel,
+                .ytp-doubletap-ui,
+                .ytp-doubletap-ui-legacy,
+                ytm-custom-control,
+                .ytm-autonav-bar,
+                .player-controls-background {
+                    display: none !important;
+                    pointer-events: none !important;
+                }
+
                 #youtoob-controls {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    z-index: 999;
+                    position: absolute !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    right: 0 !important;
+                    bottom: 0 !important;
+                    z-index: 99999 !important;
                     pointer-events: none;
                 }
                 #youtoob-controls.show-controls .youtoob-center-controls {
@@ -65,6 +90,7 @@
                     bottom: 0;
                     display: flex;
                     pointer-events: auto;
+                    z-index: 100000;
                 }
                 .youtoob-tap-zone {
                     flex: 1;
@@ -104,6 +130,7 @@
                     opacity: 0;
                     transition: opacity 0.2s;
                     pointer-events: auto;
+                    z-index: 100001;
                 }
                 .youtoob-btn {
                     background: rgba(0,0,0,0.6);
@@ -128,13 +155,14 @@
                 .youtoob-bottom-bar {
                     position: absolute;
                     bottom: 10px;
-                    right: 60px;
+                    right: 10px;
                     display: flex;
                     gap: 6px;
                     align-items: center;
                     opacity: 0;
                     transition: opacity 0.2s;
                     pointer-events: auto;
+                    z-index: 100001;
                 }
                 .youtoob-pill-btn {
                     background: rgba(0,0,0,0.6);
@@ -219,11 +247,11 @@
                         <div class="youtoob-menu-option" data-speed="2">2.0x</div>
                     </div>
                 </div>
+                <button class="youtoob-pill-btn" id="youtoob-fullscreen">⛶</button>
             </div>
         `;
 
-        // Make player container position relative for absolute positioning
-        playerContainer.style.position = 'relative';
+        // Append overlay - don't modify container's position as it breaks YouTube layout
         playerContainer.appendChild(overlay);
 
         // State
@@ -348,6 +376,9 @@
             }
         }
 
+        // Show controls initially for 3 seconds so user knows they exist
+        showControls();
+
         // Double tap detection
         function handleLeftTap(e) {
             e.stopPropagation();
@@ -441,6 +472,28 @@
             showControls();
         });
 
+        document.getElementById('youtoob-fullscreen').addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Try YouTube's fullscreen button first
+            const ytFullscreen = document.querySelector('.ytp-fullscreen-button') ||
+                                document.querySelector('[aria-label*="ull screen"]') ||
+                                document.querySelector('button.fullscreen-icon');
+            if (ytFullscreen) {
+                ytFullscreen.click();
+            } else {
+                // Fallback: use Fullscreen API on video element
+                const videoEl = document.querySelector('video');
+                if (videoEl) {
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    } else {
+                        videoEl.requestFullscreen();
+                    }
+                }
+            }
+            showControls();
+        });
+
         document.querySelectorAll('#youtoob-speed-menu .youtoob-menu-option').forEach(option => {
             option.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -458,6 +511,18 @@
         video.addEventListener('ratechange', () => {
             const rate = video.playbackRate;
             speedBtn.textContent = rate === 1 ? '1.0' : rate.toString();
+        });
+
+        // Handle fullscreen changes - re-attach overlay to fullscreen element
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                // Move overlay into fullscreen element
+                document.fullscreenElement.appendChild(overlay);
+            } else {
+                // Move overlay back to player container
+                playerContainer.appendChild(overlay);
+            }
+            showControls();
         });
 
         console.log('Youtoob custom player controls injected');
