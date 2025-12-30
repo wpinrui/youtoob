@@ -28,7 +28,7 @@ enum class BundledExtension(
         id = "youtoob-player@youtoob.app",
         displayName = "Youtoob Player",
         folderName = "youtoob_player",
-        defaultEnabled = true
+        defaultEnabled = false // Disabled for testing
     );
 
     val builtInUri: String
