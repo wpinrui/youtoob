@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,14 +23,41 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.getSystemService
 import com.wpinrui.youtoob.gecko.GeckoRuntimeProvider
 import com.wpinrui.youtoob.gecko.GeckoSessionDelegate
+import com.wpinrui.youtoob.ui.navigation.NavDestination
 import com.wpinrui.youtoob.utils.PermissionBridge
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
-private const val YOUTUBE_MOBILE_URL = "https://m.youtube.com"
+private val HIDE_YOUTUBE_BOTTOM_NAV_JS = """
+(function() {
+    var style = document.getElementById('youtoob-custom-style');
+    if (!style) {
+        style = document.createElement('style');
+        style.id = 'youtoob-custom-style';
+        style.textContent = `
+            ytm-pivot-bar-renderer,
+            ytm-pivot-bar-item-renderer {
+                display: none !important;
+            }
+            ytm-app {
+                padding-bottom: 0 !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+})();
+""".trimIndent()
+
+private fun injectCustomStyles(session: GeckoSession) {
+    session.loadUri("javascript:$HIDE_YOUTUBE_BOTTOM_NAV_JS")
+}
 
 @Composable
-fun GeckoViewScreen(modifier: Modifier = Modifier) {
+fun GeckoViewScreen(
+    modifier: Modifier = Modifier,
+    navigateToUrl: String? = null,
+    onFullscreenChange: (Boolean) -> Unit = {}
+) {
     val context = LocalContext.current
     val activity = context as? Activity
     var isFullscreen by remember { mutableStateOf(false) }
@@ -70,6 +98,7 @@ fun GeckoViewScreen(modifier: Modifier = Modifier) {
         GeckoSessionDelegate(
             onFullscreenChange = { fullscreen ->
                 isFullscreen = fullscreen
+                onFullscreenChange(fullscreen)
                 activity?.let {
                     setFullscreen(it, fullscreen)
                     setOrientation(it, fullscreen)
@@ -81,7 +110,10 @@ fun GeckoViewScreen(modifier: Modifier = Modifier) {
             onMediaStopped = {
                 audioManager?.abandonAudioFocusRequest(audioFocusRequest)
             },
-            permissionBridge = permissionBridge
+            permissionBridge = permissionBridge,
+            onPageLoaded = { session ->
+                injectCustomStyles(session)
+            }
         )
     }
 
@@ -89,15 +121,22 @@ fun GeckoViewScreen(modifier: Modifier = Modifier) {
         GeckoSession().apply {
             contentDelegate = delegate
             permissionDelegate = delegate
+            progressDelegate = delegate
             mediaSessionDelegate = delegate
         }
     }
 
     DisposableEffect(Unit) {
         session.open(runtime)
-        session.loadUri(YOUTUBE_MOBILE_URL)
+        session.loadUri(requireNotNull(NavDestination.HOME.youtubeUrl))
         onDispose {
             session.close()
+        }
+    }
+
+    LaunchedEffect(navigateToUrl) {
+        navigateToUrl?.let { url ->
+            session.loadUri(url)
         }
     }
 
