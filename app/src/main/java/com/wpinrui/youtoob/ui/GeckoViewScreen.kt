@@ -31,12 +31,14 @@ import com.wpinrui.youtoob.gecko.GeckoSessionDelegate
 import com.wpinrui.youtoob.gecko.ShareRequest
 import com.wpinrui.youtoob.ui.navigation.NavDestination
 import com.wpinrui.youtoob.utils.PermissionBridge
+import com.wpinrui.youtoob.utils.isVideoPageUrl
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
 private const val SPA_NAVIGATION_DELAY_MS = 1000L
 
-private val HIDE_YOUTUBE_BOTTOM_NAV_CSS = """
+private val YOUTOOB_BASE_CSS = """
+    /* Hide YouTube bottom navigation */
     ytm-pivot-bar-renderer,
     ytm-pivot-bar-item-renderer {
         display: none !important;
@@ -44,18 +46,58 @@ private val HIDE_YOUTUBE_BOTTOM_NAV_CSS = """
     ytm-app {
         padding-bottom: 0 !important;
     }
+
+    /* Pure black background */
+    html, body, ytm-app, ytm-browse, ytm-watch {
+        background-color: #000 !important;
+    }
 """.trimIndent()
 
-private fun injectCss(session: GeckoSession) {
+private val YOUTOOB_VIDEO_PAGE_CSS = """
+    /* Hide YouTube top bar (logo/search) on video pages only */
+    ytm-mobile-topbar-renderer,
+    header.mobile-topbar-header {
+        display: none !important;
+    }
+    /* Remove top padding/margin everywhere */
+    ytm-app,
+    ytm-watch,
+    .page-container,
+    .watch-below-the-player,
+    ytm-player,
+    ytm-player-container,
+    .player-container,
+    .html5-video-player,
+    .html5-video-container,
+    #player-container-id,
+    .ytm-autonav-bar {
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+        top: 0 !important;
+    }
+    /* Hide Gemini Ask button and collapse its space completely */
+    button[aria-label="Ask"],
+    yt-button-view-model:has(button[aria-label="Ask"]),
+    button-view-model:has(button[aria-label="Ask"]),
+    #flexible-item-buttons:has(button[aria-label="Ask"]),
+    ytm-button-renderer:has(button[aria-label="Ask"]) {
+        display: none !important;
+    }
+""".trimIndent()
+
+private fun injectCss(session: GeckoSession, isVideoPage: Boolean) {
+    val videoCss = if (isVideoPage) YOUTOOB_VIDEO_PAGE_CSS else ""
+    val fullCss = YOUTOOB_BASE_CSS + "\n" + videoCss
+
     val cssScript = """
         (function() {
             var style = document.getElementById('youtoob-custom-style');
             if (!style) {
                 style = document.createElement('style');
                 style.id = 'youtoob-custom-style';
-                style.textContent = `$HIDE_YOUTUBE_BOTTOM_NAV_CSS`;
                 document.head.appendChild(style);
             }
+            style.textContent = `$fullCss`;
         })();
     """.trimIndent()
 
@@ -66,7 +108,9 @@ private fun injectCss(session: GeckoSession) {
 fun GeckoViewScreen(
     modifier: Modifier = Modifier,
     navigateToUrl: String? = null,
-    onFullscreenChange: (Boolean) -> Unit = {}
+    onFullscreenChange: (Boolean) -> Unit = {},
+    onUrlChange: (String) -> Unit = {},
+    onSessionReady: (GeckoSession) -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -123,16 +167,17 @@ fun GeckoViewScreen(
             },
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
-                injectCss(session)
+                injectCss(session, currentUrl.isVideoPageUrl())
             },
             onUrlChange = { url, session ->
-                val wasVideoPage = currentUrl.contains("/watch")
-                val isVideoPage = url.contains("/watch")
+                val wasVideoPage = currentUrl.isVideoPageUrl()
+                val isVideoPage = url.isVideoPageUrl()
                 currentUrl = url
-                // Inject on SPA navigation to video page
-                if (isVideoPage && !wasVideoPage) {
+                onUrlChange(url)
+                // Re-inject CSS on SPA navigation when video page state changes
+                if (isVideoPage != wasVideoPage) {
                     Handler(Looper.getMainLooper()).postDelayed({
-                        injectCss(session)
+                        injectCss(session, isVideoPage)
                     }, SPA_NAVIGATION_DELAY_MS)
                 }
             },
@@ -156,6 +201,7 @@ fun GeckoViewScreen(
     DisposableEffect(Unit) {
         session.open(runtime)
         session.loadUri(requireNotNull(NavDestination.HOME.youtubeUrl))
+        onSessionReady(session)
         onDispose {
             session.close()
         }
@@ -170,6 +216,7 @@ fun GeckoViewScreen(
     AndroidView(
         factory = { ctx ->
             GeckoView(ctx).apply {
+                setBackgroundColor(android.graphics.Color.BLACK)
                 setSession(session)
             }
         },

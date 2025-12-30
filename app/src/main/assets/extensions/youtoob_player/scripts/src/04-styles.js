@@ -156,12 +156,15 @@ const PLAYER_STYLES = `
         left: 50%;
         transform: translate(-50%, -50%);
         display: flex;
-        gap: 48px;
+        gap: 38px;
         align-items: center;
         opacity: 0;
         transition: opacity 0.2s;
         pointer-events: none;
         z-index: 100001;
+    }
+    #youtoob-controls.fullscreen .youtoob-center-controls {
+        gap: 48px;
     }
     #youtoob-controls.show-controls .youtoob-center-controls {
         pointer-events: auto;
@@ -185,10 +188,18 @@ const PLAYER_STYLES = `
         pointer-events: none;
     }
     .youtoob-btn-small {
+        width: 38px;
+        height: 38px;
+    }
+    .youtoob-btn-large {
+        width: 52px;
+        height: 52px;
+    }
+    #youtoob-controls.fullscreen .youtoob-btn-small {
         width: 48px;
         height: 48px;
     }
-    .youtoob-btn-large {
+    #youtoob-controls.fullscreen .youtoob-btn-large {
         width: 64px;
         height: 64px;
     }

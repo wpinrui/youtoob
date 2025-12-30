@@ -3,11 +3,14 @@ package com.wpinrui.youtoob
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,6 +22,8 @@ import com.wpinrui.youtoob.ui.SettingsActivity
 import com.wpinrui.youtoob.ui.components.YoutoobBottomNav
 import com.wpinrui.youtoob.ui.navigation.NavDestination
 import com.wpinrui.youtoob.ui.theme.YouToobTheme
+import com.wpinrui.youtoob.utils.isVideoPageUrl
+import org.mozilla.geckoview.GeckoSession
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,9 +34,19 @@ class MainActivity : ComponentActivity() {
                 var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
                 var navigateToUrl by remember { mutableStateOf<String?>(null) }
                 var isFullscreen by remember { mutableStateOf(false) }
+                var currentUrl by remember { mutableStateOf("") }
+                var geckoSession by remember { mutableStateOf<GeckoSession?>(null) }
+
+                val isVideoPage = currentUrl.isVideoPageUrl()
+                val shouldShowNav = !isFullscreen && !isVideoPage
+
+                BackHandler(enabled = isVideoPage) {
+                    geckoSession?.goBack()
+                }
 
                 Scaffold(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().background(Color.Black),
+                    containerColor = Color.Black,
                     bottomBar = {
                         YoutoobBottomNav(
                             currentDestination = currentDestination,
@@ -49,7 +64,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             },
-                            isVisible = !isFullscreen
+                            isVisible = shouldShowNav
                         )
                     }
                 ) { innerPadding ->
@@ -58,6 +73,12 @@ class MainActivity : ComponentActivity() {
                         navigateToUrl = navigateToUrl,
                         onFullscreenChange = { fullscreen ->
                             isFullscreen = fullscreen
+                        },
+                        onUrlChange = { url ->
+                            currentUrl = url
+                        },
+                        onSessionReady = { session ->
+                            geckoSession = session
                         }
                     )
                 }
