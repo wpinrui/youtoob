@@ -142,7 +142,6 @@ fun GeckoViewScreen(
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
-    var isFullscreen by remember { mutableStateOf(false) }
     var currentUrl by remember { mutableStateOf("") }
 
     val audioManager = remember { context.getSystemService<AudioManager>() }
@@ -188,7 +187,6 @@ fun GeckoViewScreen(
     val delegate = remember {
         GeckoSessionDelegate(
             onFullscreenChange = { fullscreen ->
-                isFullscreen = fullscreen
                 onFullscreenChange(fullscreen)
                 activity?.let {
                     setFullscreen(it, fullscreen)
