@@ -304,6 +304,8 @@
         }
         #youtoob-controls.fullscreen .youtoob-seek-container {
             bottom: 30px;
+            left: 62px;
+            right: 62px;
         }
         #youtoob-controls.show-controls .youtoob-seek-container {
             opacity: 1;
