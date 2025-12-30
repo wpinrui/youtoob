@@ -4,6 +4,8 @@
 // This pattern avoids size limits by using web_accessible_resources
 
 (function() {
+    const SPA_NAVIGATION_DELAY_MS = 500;
+
     // Only run on watch pages
     function shouldRun() {
         return location.hostname.includes('youtube.com');
@@ -40,7 +42,7 @@
         if (location.href !== lastUrl) {
             lastUrl = location.href;
             // Small delay to let the new page render
-            setTimeout(injectPlayerScript, 500);
+            setTimeout(injectPlayerScript, SPA_NAVIGATION_DELAY_MS);
         }
     });
 
