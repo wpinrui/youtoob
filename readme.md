@@ -28,7 +28,7 @@ YouToob wraps YouTube's mobile site in Firefox's GeckoView engine, enabling Fire
 
 **Estimated**: 1-2 weeks
 
-### Phase 2: Extension Integration 🔄 (Current Phase)
+### Phase 2: Extension Integration ✅ (Complete)
 **Goal**: Get Firefox extensions working
 
 - [x] Research GeckoView extension API
@@ -36,14 +36,14 @@ YouToob wraps YouTube's mobile site in Firefox's GeckoView engine, enabling Fire
 - [x] Bundle SponsorBlock extension
 - [x] Bundle YouTube HD extension
 - [x] Create extension manager system
-- [ ] Test extension loading and functionality
+- [x] Test extension loading and functionality
 
 **Estimated**: 2-3 weeks
 
-### Phase 3: Custom UI & Controls 📋
+### Phase 3: Custom UI & Controls 🔄 (Current Phase)
 **Goal**: Improve UX beyond basic browser wrapper
 
-- [ ] Design custom bottom navigation
+- [x] Design custom bottom navigation
 - [ ] Implement gesture controls (swipe for volume/brightness)
 - [ ] Add custom playback controls
 - [ ] Hide unnecessary YouTube UI elements (via CSS injection)
@@ -135,6 +135,6 @@ cd youtoob
 
 ## Roadmap Status
 
-- **Current Phase**: Phase 2 (Extension Integration)
-- **Next Milestone**: Get Firefox extensions working with GeckoView
-- **Total Progress**: ~15% (Phase 1 complete!)
+- **Current Phase**: Phase 3 (Custom UI & Controls)
+- **Next Milestone**: Complete gesture controls and custom playback
+- **Total Progress**: ~30% (Phases 1-2 complete!)
