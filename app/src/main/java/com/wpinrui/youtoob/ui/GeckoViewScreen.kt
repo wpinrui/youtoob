@@ -183,6 +183,9 @@ fun GeckoViewScreen(
             },
             onShareRequest = { request, callback ->
                 launchShareIntent(context, request, callback)
+            },
+            onGoBackRequest = { session ->
+                session.goBack()
             }
         )
     }

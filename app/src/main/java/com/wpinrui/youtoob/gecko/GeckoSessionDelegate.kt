@@ -1,11 +1,15 @@
 package com.wpinrui.youtoob.gecko
 
+import org.mozilla.geckoview.AllowOrDeny
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.MediaSession
 import com.wpinrui.youtoob.utils.PermissionBridge
 
 data class ShareRequest(val title: String?, val text: String?, val uri: String?)
+
+private const val YOUTOOB_SCHEME = "youtoob"
+private const val GOBACK_ACTION = "goback"
 
 class GeckoSessionDelegate(
     private val onFullscreenChange: (Boolean) -> Unit,
@@ -14,7 +18,8 @@ class GeckoSessionDelegate(
     private val permissionBridge: PermissionBridge,
     private val onPageLoaded: (GeckoSession) -> Unit = {},
     private val onUrlChange: (String, GeckoSession) -> Unit = { _, _ -> },
-    private val onShareRequest: (ShareRequest, (Boolean) -> Unit) -> Unit = { _, callback -> callback(false) }
+    private val onShareRequest: (ShareRequest, (Boolean) -> Unit) -> Unit = { _, callback -> callback(false) },
+    private val onGoBackRequest: (GeckoSession) -> Unit = {}
 ) : GeckoSession.ContentDelegate,
     GeckoSession.PermissionDelegate,
     GeckoSession.ProgressDelegate,
@@ -101,6 +106,24 @@ class GeckoSessionDelegate(
     // NavigationDelegate - Track URL changes
     override fun onLocationChange(session: GeckoSession, url: String?, perms: MutableList<GeckoSession.PermissionDelegate.ContentPermission>, hasUserGesture: Boolean) {
         url?.let { onUrlChange(it, session) }
+    }
+
+    // NavigationDelegate - Intercept custom URL scheme for JS→Kotlin bridge
+    override fun onLoadRequest(
+        session: GeckoSession,
+        request: GeckoSession.NavigationDelegate.LoadRequest
+    ): GeckoResult<AllowOrDeny>? {
+        val uri = request.uri
+        if (uri.startsWith("$YOUTOOB_SCHEME://")) {
+            val action = uri.removePrefix("$YOUTOOB_SCHEME://")
+            when (action) {
+                GOBACK_ACTION -> onGoBackRequest(session)
+            }
+            // Block the navigation - we handled it
+            return GeckoResult.fromValue(AllowOrDeny.DENY)
+        }
+        // Allow normal navigation
+        return GeckoResult.fromValue(AllowOrDeny.ALLOW)
     }
 
     // PromptDelegate - Handle Web Share API
