@@ -85,11 +85,16 @@
             justify-content: center;
         }
         .youtoob-skip-indicator {
-            background: rgba(0,0,0,0.7);
+            background: rgba(255,255,255,0.15);
             border-radius: 50%;
-            padding: 16px 20px;
+            width: 100vh;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             opacity: 0;
-            transition: opacity 0.2s;
+            transition: opacity 0.15s;
             pointer-events: none;
         }
         .youtoob-skip-indicator.show {
@@ -102,7 +107,7 @@
             text-align: center;
         }
         .youtoob-skip-arrows {
-            font-size: 18px;
+            font-size: 24px;
             letter-spacing: -4px;
         }
         .youtoob-center-controls {
@@ -115,8 +120,11 @@
             align-items: center;
             opacity: 0;
             transition: opacity 0.2s;
-            pointer-events: auto;
+            pointer-events: none;
             z-index: 100001;
+        }
+        #youtoob-controls.show-controls .youtoob-center-controls {
+            pointer-events: auto;
         }
         .youtoob-btn {
             background: rgba(0,0,0,0.6);
@@ -147,8 +155,11 @@
             align-items: center;
             opacity: 0;
             transition: opacity 0.2s;
-            pointer-events: auto;
+            pointer-events: none;
             z-index: 100001;
+        }
+        #youtoob-controls.show-controls .youtoob-bottom-bar {
+            pointer-events: auto;
         }
         .youtoob-pill-btn {
             background: rgba(0,0,0,0.6);
@@ -340,7 +351,8 @@
             const now = Date.now();
 
             if (now - lastTap < DOUBLE_TAP_THRESHOLD_MS) {
-                // Double tap - skip
+                // Double tap - skip and hide controls
+                controls.hide();
                 accumSeconds += SKIP_SECONDS;
                 if (direction === 'back') {
                     video.currentTime = Math.max(0, video.currentTime - SKIP_SECONDS);
