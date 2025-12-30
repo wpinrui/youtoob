@@ -13,6 +13,17 @@
         }
     }
 
+    // Get quality label from height
+    function getQualityLabel(height) {
+        if (height >= 2160) return '4K';
+        if (height >= 1440) return '1440p';
+        if (height >= 1080) return 'FHD';
+        if (height >= 720) return 'HD';
+        if (height >= 480) return '480p';
+        if (height >= 360) return '360p';
+        return 'Auto';
+    }
+
     // Create custom controls overlay
     function createCustomControls(video) {
         // Find the player container
@@ -116,47 +127,54 @@
                 }
                 .youtoob-bottom-bar {
                     position: absolute;
-                    bottom: 48px;
-                    right: 12px;
+                    bottom: 10px;
+                    right: 60px;
                     display: flex;
-                    gap: 8px;
+                    gap: 6px;
                     align-items: center;
                     opacity: 0;
                     transition: opacity 0.2s;
                     pointer-events: auto;
                 }
-                .youtoob-speed-btn {
-                    background: rgba(0,0,0,0.7);
-                    border: none;
+                .youtoob-pill-btn {
+                    background: rgba(0,0,0,0.6);
+                    border: 1px solid rgba(255,255,255,0.3);
                     border-radius: 4px;
                     color: white;
-                    padding: 6px 12px;
-                    font-size: 14px;
+                    padding: 4px 8px;
+                    font-size: 13px;
                     font-weight: 500;
                     cursor: pointer;
+                    min-width: 36px;
+                    text-align: center;
                 }
-                .youtoob-speed-menu {
+                .youtoob-pill-btn:active {
+                    background: rgba(255,255,255,0.2);
+                }
+                .youtoob-menu {
                     position: absolute;
-                    bottom: 40px;
+                    bottom: 36px;
                     right: 0;
                     background: #212121;
                     border-radius: 8px;
                     padding: 8px 0;
                     display: none;
+                    min-width: 100px;
                 }
-                .youtoob-speed-menu.show {
+                .youtoob-menu.show {
                     display: block;
                 }
-                .youtoob-speed-option {
+                .youtoob-menu-option {
                     color: white;
-                    padding: 12px 24px;
+                    padding: 10px 16px;
                     cursor: pointer;
-                    font-size: 14px;
+                    font-size: 13px;
+                    white-space: nowrap;
                 }
-                .youtoob-speed-option:hover {
+                .youtoob-menu-option:hover {
                     background: rgba(255,255,255,0.1);
                 }
-                .youtoob-speed-option.active {
+                .youtoob-menu-option.active {
                     color: #3ea6ff;
                     font-weight: bold;
                 }
@@ -186,15 +204,19 @@
 
             <div class="youtoob-bottom-bar">
                 <div style="position: relative;">
-                    <button class="youtoob-speed-btn" id="youtoob-speed">1.0x</button>
-                    <div class="youtoob-speed-menu" id="youtoob-speed-menu">
-                        <div class="youtoob-speed-option" data-speed="0.5">0.5x</div>
-                        <div class="youtoob-speed-option" data-speed="0.75">0.75x</div>
-                        <div class="youtoob-speed-option active" data-speed="1">1.0x</div>
-                        <div class="youtoob-speed-option" data-speed="1.25">1.25x</div>
-                        <div class="youtoob-speed-option" data-speed="1.5">1.5x</div>
-                        <div class="youtoob-speed-option" data-speed="1.75">1.75x</div>
-                        <div class="youtoob-speed-option" data-speed="2">2.0x</div>
+                    <button class="youtoob-pill-btn" id="youtoob-quality">FHD</button>
+                    <div class="youtoob-menu" id="youtoob-quality-menu"></div>
+                </div>
+                <div style="position: relative;">
+                    <button class="youtoob-pill-btn" id="youtoob-speed">1.0</button>
+                    <div class="youtoob-menu" id="youtoob-speed-menu">
+                        <div class="youtoob-menu-option" data-speed="0.5">0.5x</div>
+                        <div class="youtoob-menu-option" data-speed="0.75">0.75x</div>
+                        <div class="youtoob-menu-option active" data-speed="1">1.0x</div>
+                        <div class="youtoob-menu-option" data-speed="1.25">1.25x</div>
+                        <div class="youtoob-menu-option" data-speed="1.5">1.5x</div>
+                        <div class="youtoob-menu-option" data-speed="1.75">1.75x</div>
+                        <div class="youtoob-menu-option" data-speed="2">2.0x</div>
                     </div>
                 </div>
             </div>
@@ -211,12 +233,13 @@
         let skipForwardAccum = 0;
         let lastLeftTap = 0;
         let lastRightTap = 0;
-        let lastCenterTap = 0;
 
         // Elements
         const playPauseBtn = document.getElementById('youtoob-play-pause');
         const speedBtn = document.getElementById('youtoob-speed');
         const speedMenu = document.getElementById('youtoob-speed-menu');
+        const qualityBtn = document.getElementById('youtoob-quality');
+        const qualityMenu = document.getElementById('youtoob-quality-menu');
         const skipBackIndicator = document.getElementById('youtoob-skip-back');
         const skipForwardIndicator = document.getElementById('youtoob-skip-forward');
         const skipBackText = document.getElementById('youtoob-skip-back-text');
@@ -233,6 +256,75 @@
         video.addEventListener('pause', updatePlayPause);
         updatePlayPause();
 
+        // Update quality display
+        function updateQualityDisplay() {
+            const height = video.videoHeight;
+            qualityBtn.textContent = getQualityLabel(height);
+        }
+        video.addEventListener('loadedmetadata', updateQualityDisplay);
+        video.addEventListener('resize', updateQualityDisplay);
+        updateQualityDisplay();
+
+        // Populate quality menu by checking available qualities
+        function populateQualityMenu() {
+            // Try to get available qualities from YouTube's player
+            const ytPlayer = document.querySelector('.html5-video-player');
+            let qualities = [];
+
+            if (ytPlayer && ytPlayer.getAvailableQualityLevels) {
+                qualities = ytPlayer.getAvailableQualityLevels();
+            }
+
+            // Fallback to common qualities
+            if (!qualities || qualities.length === 0) {
+                qualities = ['hd1080', 'hd720', 'large', 'medium', 'small'];
+            }
+
+            const qualityLabels = {
+                'hd2160': '4K (2160p)',
+                'hd1440': '1440p',
+                'hd1080': '1080p (FHD)',
+                'hd720': '720p (HD)',
+                'large': '480p',
+                'medium': '360p',
+                'small': '240p',
+                'tiny': '144p',
+                'auto': 'Auto'
+            };
+
+            qualityMenu.innerHTML = '';
+            qualities.forEach(q => {
+                const label = qualityLabels[q] || q;
+                const div = document.createElement('div');
+                div.className = 'youtoob-menu-option';
+                div.dataset.quality = q;
+                div.textContent = label;
+                qualityMenu.appendChild(div);
+            });
+
+            // Add click handlers
+            qualityMenu.querySelectorAll('.youtoob-menu-option').forEach(option => {
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const quality = option.dataset.quality;
+
+                    // Try to set quality via YouTube's player API
+                    const ytPlayer = document.querySelector('.html5-video-player');
+                    if (ytPlayer && ytPlayer.setPlaybackQualityRange) {
+                        ytPlayer.setPlaybackQualityRange(quality, quality);
+                    } else if (ytPlayer && ytPlayer.setPlaybackQuality) {
+                        ytPlayer.setPlaybackQuality(quality);
+                    }
+
+                    qualityMenu.querySelectorAll('.youtoob-menu-option').forEach(o => o.classList.remove('active'));
+                    option.classList.add('active');
+                    qualityMenu.classList.remove('show');
+                    showControls();
+                });
+            });
+        }
+        populateQualityMenu();
+
         // Show/hide controls
         function showControls() {
             controlsVisible = true;
@@ -245,6 +337,7 @@
             controlsVisible = false;
             overlay.classList.remove('show-controls');
             speedMenu.classList.remove('show');
+            qualityMenu.classList.remove('show');
         }
 
         function toggleControls() {
@@ -320,7 +413,6 @@
 
         document.getElementById('youtoob-prev').addEventListener('click', (e) => {
             e.stopPropagation();
-            // Try to click YouTube's previous button
             const prevBtn = document.querySelector('.ytp-prev-button') ||
                            document.querySelector('[aria-label*="Previous"]');
             if (prevBtn) prevBtn.click();
@@ -329,7 +421,6 @@
 
         document.getElementById('youtoob-next').addEventListener('click', (e) => {
             e.stopPropagation();
-            // Try to click YouTube's next button
             const nextBtn = document.querySelector('.ytp-next-button') ||
                            document.querySelector('[aria-label*="Next"]');
             if (nextBtn) nextBtn.click();
@@ -338,17 +429,25 @@
 
         speedBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            qualityMenu.classList.remove('show');
             speedMenu.classList.toggle('show');
             showControls();
         });
 
-        document.querySelectorAll('.youtoob-speed-option').forEach(option => {
+        qualityBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            speedMenu.classList.remove('show');
+            qualityMenu.classList.toggle('show');
+            showControls();
+        });
+
+        document.querySelectorAll('#youtoob-speed-menu .youtoob-menu-option').forEach(option => {
             option.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const speed = parseFloat(option.dataset.speed);
                 video.playbackRate = speed;
-                speedBtn.textContent = speed + 'x';
-                document.querySelectorAll('.youtoob-speed-option').forEach(o => o.classList.remove('active'));
+                speedBtn.textContent = speed === 1 ? '1.0' : speed.toString();
+                document.querySelectorAll('#youtoob-speed-menu .youtoob-menu-option').forEach(o => o.classList.remove('active'));
                 option.classList.add('active');
                 speedMenu.classList.remove('show');
                 showControls();
@@ -357,7 +456,8 @@
 
         // Update speed button if video speed changes externally
         video.addEventListener('ratechange', () => {
-            speedBtn.textContent = video.playbackRate + 'x';
+            const rate = video.playbackRate;
+            speedBtn.textContent = rate === 1 ? '1.0' : rate.toString();
         });
 
         console.log('Youtoob custom player controls injected');
