@@ -119,43 +119,27 @@ function setupGestures(video, overlay) {
 
     // Complete fullscreen enter with animation
     function completeFullscreenEnter() {
-        const videoEl = getVideoElement();
         const container = getPlayerContainer();
 
-        // Animate to full scale before entering fullscreen
-        if (videoEl) {
-            videoEl.style.transition = 'transform 0.15s ease-out';
-            videoEl.style.transform = 'scale(1.5) translateY(-30px)';
+        // Must request fullscreen IMMEDIATELY during user gesture - no setTimeout!
+        resetTransform(false);
+        const target = container || video.parentElement || video;
+        if (target.requestFullscreen) {
+            target.requestFullscreen();
+        } else if (target.webkitRequestFullscreen) {
+            target.webkitRequestFullscreen();
         }
-
-        setTimeout(() => {
-            resetTransform(false);
-            const target = container || video.parentElement || video;
-            if (target.requestFullscreen) {
-                target.requestFullscreen();
-            } else if (target.webkitRequestFullscreen) {
-                target.webkitRequestFullscreen();
-            }
-        }, 120);
     }
 
     // Complete fullscreen exit with animation
     function completeFullscreenExit() {
-        const videoEl = getVideoElement();
-
-        if (videoEl) {
-            videoEl.style.transition = 'transform 0.2s ease-out';
-            videoEl.style.transform = 'translateY(100px) scale(0.85)';
+        // Must exit fullscreen IMMEDIATELY during user gesture - no setTimeout!
+        resetTransform(false);
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
         }
-
-        setTimeout(() => {
-            resetTransform(false);
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            }
-        }, 100);
     }
 
     // Use capture phase on overlay to intercept events before child handlers
