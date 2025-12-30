@@ -29,6 +29,20 @@
     const FALLBACK_QUALITIES = ['hd1080', 'hd720', 'large', 'medium', 'small'];
 
     // =============================================================================
+    // SVG Icons
+    // =============================================================================
+
+    const ICONS = {
+        play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+        pause: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>',
+        prev: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>',
+        next: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>',
+        fullscreen: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>',
+        skipBack: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>',
+        skipForward: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>'
+    };
+
+    // =============================================================================
     // CSS Styles
     // =============================================================================
 
@@ -129,9 +143,10 @@
             display: block;
             text-align: center;
         }
-        .youtoob-skip-arrows {
-            font-size: 24px;
-            letter-spacing: -4px;
+        .youtoob-skip-icon svg {
+            width: 100%;
+            height: 100%;
+            fill: white;
         }
         .youtoob-center-controls {
             position: absolute;
@@ -159,15 +174,22 @@
             align-items: center;
             justify-content: center;
         }
+        .youtoob-btn svg {
+            width: 60%;
+            height: 60%;
+        }
         .youtoob-btn-small {
             width: 48px;
             height: 48px;
-            font-size: 24px;
         }
         .youtoob-btn-large {
             width: 64px;
             height: 64px;
-            font-size: 32px;
+        }
+        .youtoob-skip-icon {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 4px;
         }
         .youtoob-bottom-bar {
             position: absolute;
@@ -198,6 +220,14 @@
         }
         .youtoob-pill-btn:active {
             background: rgba(255,255,255,0.2);
+        }
+        .youtoob-icon-btn {
+            padding: 4px;
+            min-width: 32px;
+        }
+        .youtoob-icon-btn svg {
+            width: 20px;
+            height: 20px;
         }
         .youtoob-menu {
             position: absolute;
@@ -240,7 +270,7 @@
                 <div class="youtoob-tap-zone" id="youtoob-left-zone">
                     <div class="youtoob-skip-indicator" id="youtoob-skip-back">
                         <div class="youtoob-skip-content">
-                            <span class="youtoob-skip-arrows">◀◀◀</span>
+                            <div class="youtoob-skip-icon">${ICONS.skipBack}</div>
                             <span id="youtoob-skip-back-text">${SKIP_SECONDS} seconds</span>
                         </div>
                     </div>
@@ -249,7 +279,7 @@
                 <div class="youtoob-tap-zone" id="youtoob-right-zone">
                     <div class="youtoob-skip-indicator" id="youtoob-skip-forward">
                         <div class="youtoob-skip-content">
-                            <span class="youtoob-skip-arrows">▶▶▶</span>
+                            <div class="youtoob-skip-icon">${ICONS.skipForward}</div>
                             <span id="youtoob-skip-forward-text">${SKIP_SECONDS} seconds</span>
                         </div>
                     </div>
@@ -257,9 +287,9 @@
             </div>
 
             <div class="youtoob-center-controls">
-                <button class="youtoob-btn youtoob-btn-small" id="youtoob-prev">⏮</button>
-                <button class="youtoob-btn youtoob-btn-large" id="youtoob-play-pause">▶</button>
-                <button class="youtoob-btn youtoob-btn-small" id="youtoob-next">⏭</button>
+                <button class="youtoob-btn youtoob-btn-small" id="youtoob-prev">${ICONS.prev}</button>
+                <button class="youtoob-btn youtoob-btn-large" id="youtoob-play-pause">${ICONS.play}</button>
+                <button class="youtoob-btn youtoob-btn-small" id="youtoob-next">${ICONS.next}</button>
             </div>
 
             <div class="youtoob-bottom-bar">
@@ -279,7 +309,7 @@
                         <div class="youtoob-menu-option" data-speed="2">2.0x</div>
                     </div>
                 </div>
-                <button class="youtoob-pill-btn" id="youtoob-fullscreen">⛶</button>
+                <button class="youtoob-pill-btn youtoob-icon-btn" id="youtoob-fullscreen">${ICONS.fullscreen}</button>
             </div>
         `;
     }
@@ -477,7 +507,7 @@
 
     function setupPlaybackControls(video, playPauseBtn, controls) {
         function updatePlayPause() {
-            playPauseBtn.textContent = video.paused ? '▶' : '⏸';
+            playPauseBtn.innerHTML = video.paused ? ICONS.play : ICONS.pause;
         }
 
         video.addEventListener('play', updatePlayPause);
