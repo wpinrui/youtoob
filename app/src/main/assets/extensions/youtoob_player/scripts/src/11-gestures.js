@@ -119,15 +119,32 @@ function setupGestures(video, overlay) {
 
     // Complete fullscreen enter with animation
     function completeFullscreenEnter() {
-        const container = getPlayerContainer();
-
         // Must request fullscreen IMMEDIATELY during user gesture - no setTimeout!
         resetTransform(false);
-        const target = container || video.parentElement || video;
+
+        // Get FRESH DOM references - cached refs can become stale after fullscreen cycles
+        const videoEl = document.querySelector('video');
+        if (!videoEl) {
+            console.log('[YouToob] No video element found');
+            return;
+        }
+
+        // Find YouTube's player container fresh from DOM
+        const target = videoEl.closest('.html5-video-player')
+                    || videoEl.closest('[id*="player"]')
+                    || videoEl.parentElement;
+
+        console.log('[YouToob] Requesting fullscreen on:', target?.tagName, target?.id, target?.className);
+
+        let promise;
         if (target.requestFullscreen) {
-            target.requestFullscreen();
+            promise = target.requestFullscreen();
         } else if (target.webkitRequestFullscreen) {
-            target.webkitRequestFullscreen();
+            promise = target.webkitRequestFullscreen();
+        }
+
+        if (promise && promise.catch) {
+            promise.catch(err => console.log('[YouToob] Fullscreen error:', err.name, err.message));
         }
     }
 
