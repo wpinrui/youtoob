@@ -8,6 +8,7 @@ app/src/main/assets/extensions/youtoob_player/scripts/player.js
 # Android/Gradle
 *.iml
 .gradle
+.kotlin
 /local.properties
 local.properties
 /build
