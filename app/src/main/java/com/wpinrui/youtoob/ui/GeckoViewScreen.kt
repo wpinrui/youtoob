@@ -34,8 +34,7 @@ import com.wpinrui.youtoob.gecko.ShareRequest
 import com.wpinrui.youtoob.ui.navigation.NavDestination
 import com.wpinrui.youtoob.utils.PermissionBridge
 import com.wpinrui.youtoob.utils.isVideoPageUrl
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.collectLatest
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
@@ -160,6 +159,7 @@ fun GeckoViewScreen(
 
     val runtime = remember { GeckoRuntimeProvider.getRuntime(context) }
     val settingsRepository = remember { SettingsRepository(context) }
+    var cachedSettings by remember { mutableStateOf(YoutoobSettings()) }
 
     val permissionBridge = remember { PermissionBridge() }
     var pendingPermissionCallback by remember { mutableStateOf<((Map<String, Boolean>) -> Unit)?>(null) }
@@ -177,6 +177,12 @@ fun GeckoViewScreen(
             permissionLauncher.launch(permissions)
         }
         onDispose { }
+    }
+
+    LaunchedEffect(settingsRepository) {
+        settingsRepository.settings.collectLatest { settings ->
+            cachedSettings = settings
+        }
     }
 
     val delegate = remember {
@@ -199,8 +205,7 @@ fun GeckoViewScreen(
             onPageLoaded = { session ->
                 injectCss(session, currentUrl.isVideoPageUrl())
                 if (currentUrl.isVideoPageUrl()) {
-                    val settings = runBlocking { settingsRepository.getSettingsSnapshot() }
-                    injectSettings(session, settings)
+                    injectSettings(session, cachedSettings)
                 }
             },
             onUrlChange = { url, session ->
@@ -217,8 +222,7 @@ fun GeckoViewScreen(
                 // Inject settings on navigation to video page
                 if (isVideoPage) {
                     Handler(Looper.getMainLooper()).postDelayed({
-                        val settings = runBlocking { settingsRepository.getSettingsSnapshot() }
-                        injectSettings(session, settings)
+                        injectSettings(session, cachedSettings)
                     }, SPA_NAVIGATION_DELAY_MS)
                 }
             },
