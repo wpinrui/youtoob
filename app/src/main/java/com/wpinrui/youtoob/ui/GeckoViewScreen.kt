@@ -29,6 +29,30 @@ import org.mozilla.geckoview.GeckoView
 
 private const val YOUTUBE_MOBILE_URL = "https://m.youtube.com"
 
+private val HIDE_YOUTUBE_NAV_JS = """
+(function() {
+    var style = document.getElementById('youtoob-custom-style');
+    if (!style) {
+        style = document.createElement('style');
+        style.id = 'youtoob-custom-style';
+        style.textContent = `
+            ytm-pivot-bar-renderer,
+            ytm-pivot-bar-item-renderer {
+                display: none !important;
+            }
+            ytm-app {
+                padding-bottom: 0 !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+})();
+""".trimIndent()
+
+private fun injectCustomCss(session: GeckoSession) {
+    session.loadUri("javascript:$HIDE_YOUTUBE_NAV_JS")
+}
+
 @Composable
 fun GeckoViewScreen(
     modifier: Modifier = Modifier,
@@ -87,7 +111,10 @@ fun GeckoViewScreen(
             onMediaStopped = {
                 audioManager?.abandonAudioFocusRequest(audioFocusRequest)
             },
-            permissionBridge = permissionBridge
+            permissionBridge = permissionBridge,
+            onPageLoaded = { session ->
+                injectCustomCss(session)
+            }
         )
     }
 
@@ -95,6 +122,7 @@ fun GeckoViewScreen(
         GeckoSession().apply {
             contentDelegate = delegate
             permissionDelegate = delegate
+            progressDelegate = delegate
             mediaSessionDelegate = delegate
         }
     }

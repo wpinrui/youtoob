@@ -9,9 +9,11 @@ class GeckoSessionDelegate(
     private val onFullscreenChange: (Boolean) -> Unit,
     private val onMediaPlaying: () -> Unit,
     private val onMediaStopped: () -> Unit,
-    private val permissionBridge: PermissionBridge
+    private val permissionBridge: PermissionBridge,
+    private val onPageLoaded: (GeckoSession) -> Unit = {}
 ) : GeckoSession.ContentDelegate,
     GeckoSession.PermissionDelegate,
+    GeckoSession.ProgressDelegate,
     MediaSession.Delegate {
 
     // ContentDelegate - Fullscreen handling
@@ -81,5 +83,12 @@ class GeckoSessionDelegate(
 
     override fun onStop(session: GeckoSession, mediaSession: MediaSession) {
         onMediaStopped()
+    }
+
+    // ProgressDelegate - Detect page loads for CSS injection
+    override fun onPageStop(session: GeckoSession, success: Boolean) {
+        if (success) {
+            onPageLoaded(session)
+        }
     }
 }
