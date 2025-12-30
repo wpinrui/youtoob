@@ -234,10 +234,24 @@ function setupGestures(video, overlay) {
             return;
         }
 
-        if (touchStartTime === 0) return;
+        if (touchStartTime === 0) {
+            console.log('[YouToob] touchend: touchStartTime is 0, returning early');
+            return;
+        }
 
         const touchEndY = e.changedTouches[0].clientY;
         const deltaY = touchEndY - touchStartY;
+
+        console.log('[YouToob] touchend:', {
+            touchStartY,
+            touchEndY,
+            deltaY,
+            isDragging,
+            dragDirection,
+            isFS: isFullscreen(),
+            threshold: -COMPLETE_THRESHOLD,
+            wouldTrigger: dragDirection === 'up' && !isFullscreen() && deltaY < -COMPLETE_THRESHOLD
+        });
 
         // Reset touch state
         touchStartTime = 0;
@@ -246,12 +260,14 @@ function setupGestures(video, overlay) {
             // Check if drag was far enough to complete action
             if (dragDirection === 'up' && !isFullscreen() && deltaY < -COMPLETE_THRESHOLD) {
                 // Complete fullscreen enter
+                console.log('[YouToob] Calling completeFullscreenEnter');
                 completeFullscreenEnter();
             } else if (dragDirection === 'down' && isFullscreen() && deltaY > COMPLETE_THRESHOLD) {
                 // Complete fullscreen exit
                 completeFullscreenExit();
             } else {
                 // Snap back
+                console.log('[YouToob] Snapping back');
                 resetTransform(true);
             }
 
