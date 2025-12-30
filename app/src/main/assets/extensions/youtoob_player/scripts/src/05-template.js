@@ -57,11 +57,11 @@ function getOverlayHTML() {
         </div>
 
         <div class="youtoob-bottom-bar">
-            <div style="position: relative;">
+            <div class="youtoob-menu-container">
                 <button class="youtoob-pill-btn" id="youtoob-quality">FHD</button>
                 <div class="youtoob-menu" id="youtoob-quality-menu"></div>
             </div>
-            <div style="position: relative;">
+            <div class="youtoob-menu-container">
                 <button class="youtoob-pill-btn" id="youtoob-speed">1.0</button>
                 <div class="youtoob-menu" id="youtoob-speed-menu">
                     <div class="youtoob-menu-option" data-speed="0.5">0.5x</div>

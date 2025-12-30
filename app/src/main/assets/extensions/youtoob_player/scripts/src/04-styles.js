@@ -343,6 +343,9 @@ const PLAYER_STYLES = `
     .youtoob-fullscreen-btn:active {
         opacity: 0.7;
     }
+    .youtoob-menu-container {
+        position: relative;
+    }
     .youtoob-menu {
         position: absolute;
         bottom: 36px;
