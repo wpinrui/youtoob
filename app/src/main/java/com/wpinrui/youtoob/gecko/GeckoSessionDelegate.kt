@@ -5,17 +5,21 @@ import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.MediaSession
 import com.wpinrui.youtoob.utils.PermissionBridge
 
+data class ShareRequest(val title: String?, val text: String?, val uri: String?)
+
 class GeckoSessionDelegate(
     private val onFullscreenChange: (Boolean) -> Unit,
     private val onMediaPlaying: () -> Unit,
     private val onMediaStopped: () -> Unit,
     private val permissionBridge: PermissionBridge,
     private val onPageLoaded: (GeckoSession) -> Unit = {},
-    private val onUrlChange: (String, GeckoSession) -> Unit = { _, _ -> }
+    private val onUrlChange: (String, GeckoSession) -> Unit = { _, _ -> },
+    private val onShareRequest: (ShareRequest, (Boolean) -> Unit) -> Unit = { _, callback -> callback(false) }
 ) : GeckoSession.ContentDelegate,
     GeckoSession.PermissionDelegate,
     GeckoSession.ProgressDelegate,
     GeckoSession.NavigationDelegate,
+    GeckoSession.PromptDelegate,
     MediaSession.Delegate {
 
     // ContentDelegate - Fullscreen handling
@@ -97,5 +101,24 @@ class GeckoSessionDelegate(
     // NavigationDelegate - Track URL changes
     override fun onLocationChange(session: GeckoSession, url: String?, perms: MutableList<GeckoSession.PermissionDelegate.ContentPermission>, hasUserGesture: Boolean) {
         url?.let { onUrlChange(it, session) }
+    }
+
+    // PromptDelegate - Handle Web Share API
+    override fun onSharePrompt(
+        session: GeckoSession,
+        prompt: GeckoSession.PromptDelegate.SharePrompt
+    ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse>? {
+        val result = GeckoResult<GeckoSession.PromptDelegate.PromptResponse>()
+        val request = ShareRequest(prompt.title, prompt.text, prompt.uri)
+
+        onShareRequest(request) { success ->
+            if (success) {
+                result.complete(prompt.confirm(GeckoSession.PromptDelegate.SharePrompt.Result.SUCCESS))
+            } else {
+                result.complete(prompt.confirm(GeckoSession.PromptDelegate.SharePrompt.Result.ABORT))
+            }
+        }
+
+        return result
     }
 }

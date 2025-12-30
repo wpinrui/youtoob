@@ -2,6 +2,7 @@ package com.wpinrui.youtoob.ui
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
@@ -27,6 +28,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.getSystemService
 import com.wpinrui.youtoob.gecko.GeckoRuntimeProvider
 import com.wpinrui.youtoob.gecko.GeckoSessionDelegate
+import com.wpinrui.youtoob.gecko.ShareRequest
 import com.wpinrui.youtoob.ui.navigation.NavDestination
 import com.wpinrui.youtoob.utils.PermissionBridge
 import org.mozilla.geckoview.GeckoSession
@@ -133,6 +135,9 @@ fun GeckoViewScreen(
                         injectCss(session)
                     }, SPA_NAVIGATION_DELAY_MS)
                 }
+            },
+            onShareRequest = { request, callback ->
+                launchShareIntent(context, request, callback)
             }
         )
     }
@@ -144,6 +149,7 @@ fun GeckoViewScreen(
             progressDelegate = delegate
             navigationDelegate = delegate
             mediaSessionDelegate = delegate
+            promptDelegate = delegate
         }
     }
 
@@ -188,5 +194,27 @@ private fun setOrientation(activity: Activity, fullscreen: Boolean) {
         ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
     } else {
         ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    }
+}
+
+private fun launchShareIntent(context: Context, request: ShareRequest, callback: (Boolean) -> Unit) {
+    try {
+        val shareText = buildString {
+            request.title?.let { append(it).append("\n") }
+            request.text?.let { append(it).append("\n") }
+            request.uri?.let { append(it) }
+        }.trim()
+
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, shareText)
+            request.title?.let { putExtra(Intent.EXTRA_SUBJECT, it) }
+        }
+
+        val shareIntent = Intent.createChooser(sendIntent, null)
+        context.startActivity(shareIntent)
+        callback(true)
+    } catch (e: Exception) {
+        callback(false)
     }
 }
