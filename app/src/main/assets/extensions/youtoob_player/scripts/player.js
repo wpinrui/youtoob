@@ -208,8 +208,8 @@
         }
         .youtoob-bottom-bar {
             position: absolute;
-            bottom: 10px;
-            right: 10px;
+            bottom: 70px;
+            right: 12px;
             display: flex;
             gap: 6px;
             align-items: center;
@@ -287,7 +287,7 @@
         /* Seek bar styles */
         .youtoob-seek-container {
             position: absolute;
-            bottom: 48px;
+            bottom: 10px;
             left: 12px;
             right: 12px;
             display: flex;
