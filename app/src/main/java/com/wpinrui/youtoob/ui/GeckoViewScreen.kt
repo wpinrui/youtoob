@@ -200,9 +200,18 @@ fun GeckoViewScreen(
                 android.util.Log.d(TAG, "onPageLoaded, currentUrl=$currentUrl")
                 injectScripts(session, context, currentUrl.contains("/watch"))
             },
-            onUrlChange = { url ->
+            onUrlChange = { url, session ->
                 android.util.Log.d(TAG, "onUrlChange: $url")
+                val wasVideoPage = currentUrl.contains("/watch")
+                val isVideoPage = url.contains("/watch")
                 currentUrl = url
+                // Inject on SPA navigation to video page
+                if (isVideoPage && !wasVideoPage) {
+                    android.util.Log.d(TAG, "SPA navigation to video page, injecting after delay")
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        injectScripts(session, context, true)
+                    }, 1000)
+                }
             }
         )
     }
