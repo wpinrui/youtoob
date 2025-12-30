@@ -22,6 +22,7 @@ import com.wpinrui.youtoob.ui.SettingsActivity
 import com.wpinrui.youtoob.ui.components.YoutoobBottomNav
 import com.wpinrui.youtoob.ui.navigation.NavDestination
 import com.wpinrui.youtoob.ui.theme.YouToobTheme
+import com.wpinrui.youtoob.utils.isVideoPageUrl
 import org.mozilla.geckoview.GeckoSession
 
 class MainActivity : ComponentActivity() {
@@ -36,7 +37,7 @@ class MainActivity : ComponentActivity() {
                 var currentUrl by remember { mutableStateOf("") }
                 var geckoSession by remember { mutableStateOf<GeckoSession?>(null) }
 
-                val isVideoPage = currentUrl.contains("/watch")
+                val isVideoPage = currentUrl.isVideoPageUrl()
                 val shouldShowNav = !isFullscreen && !isVideoPage
 
                 BackHandler(enabled = isVideoPage) {

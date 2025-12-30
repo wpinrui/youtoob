@@ -31,6 +31,7 @@ import com.wpinrui.youtoob.gecko.GeckoSessionDelegate
 import com.wpinrui.youtoob.gecko.ShareRequest
 import com.wpinrui.youtoob.ui.navigation.NavDestination
 import com.wpinrui.youtoob.utils.PermissionBridge
+import com.wpinrui.youtoob.utils.isVideoPageUrl
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
@@ -166,11 +167,11 @@ fun GeckoViewScreen(
             },
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
-                injectCss(session, currentUrl.contains("/watch"))
+                injectCss(session, currentUrl.isVideoPageUrl())
             },
             onUrlChange = { url, session ->
-                val wasVideoPage = currentUrl.contains("/watch")
-                val isVideoPage = url.contains("/watch")
+                val wasVideoPage = currentUrl.isVideoPageUrl()
+                val isVideoPage = url.isVideoPageUrl()
                 currentUrl = url
                 onUrlChange(url)
                 // Re-inject CSS on SPA navigation when video page state changes
