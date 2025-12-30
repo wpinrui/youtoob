@@ -21,16 +21,42 @@ function setupPlaybackControls(video, playPauseBtn, controls) {
         controls.show();
     });
 
-    document.getElementById('youtoob-prev').addEventListener('click', (e) => {
+    const prevEl = document.getElementById('youtoob-prev');
+    const nextEl = document.getElementById('youtoob-next');
+
+    // Check if YouTube's navigation buttons are available
+    function updateNavButtonStates() {
+        const ytPrevBtn = document.querySelector('.ytp-prev-button') ||
+            document.querySelector('[aria-label*="Previous"]');
+        const ytNextBtn = document.querySelector('.ytp-next-button') ||
+            document.querySelector('[aria-label*="Next"]');
+
+        // Check if buttons exist and are enabled
+        const prevDisabled = !ytPrevBtn || ytPrevBtn.disabled ||
+            ytPrevBtn.getAttribute('aria-disabled') === 'true';
+        const nextDisabled = !ytNextBtn || ytNextBtn.disabled ||
+            ytNextBtn.getAttribute('aria-disabled') === 'true';
+
+        prevEl.classList.toggle('disabled', prevDisabled);
+        nextEl.classList.toggle('disabled', nextDisabled);
+    }
+
+    // Initial check and periodic updates
+    updateNavButtonStates();
+    setInterval(updateNavButtonStates, 2000);
+
+    prevEl.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (prevEl.classList.contains('disabled')) return;
         const prevBtn = document.querySelector('.ytp-prev-button') ||
             document.querySelector('[aria-label*="Previous"]');
         if (prevBtn) prevBtn.click();
         controls.show();
     });
 
-    document.getElementById('youtoob-next').addEventListener('click', (e) => {
+    nextEl.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (nextEl.classList.contains('disabled')) return;
         const nextBtn = document.querySelector('.ytp-next-button') ||
             document.querySelector('[aria-label*="Next"]');
         if (nextBtn) nextBtn.click();

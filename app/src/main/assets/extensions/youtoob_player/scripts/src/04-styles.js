@@ -180,6 +180,10 @@ const PLAYER_STYLES = `
         width: 60%;
         height: 60%;
     }
+    .youtoob-btn.disabled {
+        opacity: 0.3;
+        pointer-events: none;
+    }
     .youtoob-btn-small {
         width: 48px;
         height: 48px;
