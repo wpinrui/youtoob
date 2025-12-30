@@ -3,12 +3,16 @@ package com.wpinrui.youtoob.ui.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.wpinrui.youtoob.ui.navigation.NavDestination
 
 @Composable
@@ -24,13 +28,30 @@ fun YoutoobBottomNav(
         exit = slideOutVertically(targetOffsetY = { it }),
         modifier = modifier
     ) {
-        NavigationBar {
+        NavigationBar(
+            containerColor = Color.Black,
+            contentColor = Color.White,
+            windowInsets = WindowInsets(0.dp)
+        ) {
             NavDestination.entries.forEach { destination ->
+                val isSelected = currentDestination == destination
                 NavigationBarItem(
-                    icon = { Icon(destination.icon, contentDescription = destination.label) },
+                    icon = {
+                        Icon(
+                            imageVector = if (isSelected) destination.selectedIcon else destination.unselectedIcon,
+                            contentDescription = destination.label
+                        )
+                    },
                     label = { Text(destination.label) },
-                    selected = currentDestination == destination,
-                    onClick = { onNavigate(destination) }
+                    selected = isSelected,
+                    onClick = { onNavigate(destination) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color.White,
+                        selectedTextColor = Color.White,
+                        unselectedIconColor = Color.White.copy(alpha = 0.7f),
+                        unselectedTextColor = Color.White.copy(alpha = 0.7f),
+                        indicatorColor = Color.Transparent
+                    )
                 )
             }
         }

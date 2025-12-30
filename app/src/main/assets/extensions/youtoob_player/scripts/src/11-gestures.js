@@ -98,7 +98,6 @@ function setupGestures(video, overlay) {
 
         if (!isFullscreen()) {
             // Portrait mode: dragging UP to enter fullscreen
-            // Scale video and translate up as user drags (fills toward notification bar)
             if (deltaY < -DRAG_THRESHOLD) {
                 const progress = Math.min(Math.abs(deltaY + DRAG_THRESHOLD) / COMPLETE_THRESHOLD, 1);
                 const scale = 1 + (progress * DRAG_SCALE_FACTOR);
@@ -106,6 +105,14 @@ function setupGestures(video, overlay) {
                 video.style.transition = 'none';
                 video.style.transform = `scale(${scale}) translateY(${translateY}px)`;
                 video.style.transformOrigin = 'center center';
+            }
+            // Portrait mode: dragging DOWN to go back to home
+            if (deltaY > DRAG_THRESHOLD) {
+                const translateY = Math.min(deltaY - DRAG_THRESHOLD, COMPLETE_THRESHOLD * EXIT_FULLSCREEN_TRANSLATE_LIMIT);
+                const scale = 1 - (translateY / (COMPLETE_THRESHOLD * EXIT_FULLSCREEN_SCALE_DIVISOR));
+                video.style.transition = 'none';
+                video.style.transform = `translateY(${translateY}px) scale(${Math.max(scale, EXIT_FULLSCREEN_MIN_SCALE)})`;
+                video.style.transformOrigin = 'center top';
             }
         } else {
             // Fullscreen mode: dragging DOWN to exit
@@ -150,6 +157,12 @@ function setupGestures(video, overlay) {
     function completeFullscreenGesture() {
         resetTransform(false);
         toggleFullscreen();
+    }
+
+    // Navigate to YouTube home (for swipe down in portrait)
+    function navigateToHome() {
+        resetTransform(false);
+        window.location.href = 'https://m.youtube.com';
     }
 
     // Attach to document instead of overlay - overlay moves during fullscreen which corrupts touch handling
@@ -244,9 +257,8 @@ function setupGestures(video, overlay) {
 
         // Apply progressive transform
         if (isDragging) {
-            // Only allow up in portrait, down in fullscreen
-            if ((dragDirection === 'up' && !isFullscreen()) ||
-                (dragDirection === 'down' && isFullscreen())) {
+            // Allow up/down in portrait, down in fullscreen
+            if (!isFullscreen() || (dragDirection === 'down' && isFullscreen())) {
                 applyDragTransform(deltaY);
             }
         }
@@ -283,8 +295,13 @@ function setupGestures(video, overlay) {
         if (isDragging) {
             // Check if drag was far enough to complete action
             if (dragDirection === 'up' && !isFullscreen() && deltaY < -COMPLETE_THRESHOLD) {
+                // Portrait: swipe up → enter fullscreen
                 completeFullscreenGesture();
+            } else if (dragDirection === 'down' && !isFullscreen() && deltaY > COMPLETE_THRESHOLD) {
+                // Portrait: swipe down → go to home
+                navigateToHome();
             } else if (dragDirection === 'down' && isFullscreen() && deltaY > COMPLETE_THRESHOLD) {
+                // Fullscreen: swipe down → exit fullscreen
                 completeFullscreenGesture();
             } else {
                 // Snap back

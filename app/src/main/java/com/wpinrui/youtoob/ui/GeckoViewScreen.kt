@@ -36,7 +36,8 @@ import org.mozilla.geckoview.GeckoView
 
 private const val SPA_NAVIGATION_DELAY_MS = 1000L
 
-private val HIDE_YOUTUBE_BOTTOM_NAV_CSS = """
+private val YOUTOOB_BASE_CSS = """
+    /* Hide YouTube bottom navigation */
     ytm-pivot-bar-renderer,
     ytm-pivot-bar-item-renderer {
         display: none !important;
@@ -44,18 +45,138 @@ private val HIDE_YOUTUBE_BOTTOM_NAV_CSS = """
     ytm-app {
         padding-bottom: 0 !important;
     }
+
+    /* Pure black background */
+    html, body, ytm-app, ytm-browse, ytm-watch {
+        background-color: #000 !important;
+    }
 """.trimIndent()
 
-private fun injectCss(session: GeckoSession) {
+private val YOUTOOB_VIDEO_PAGE_CSS = """
+    /* Hide YouTube top bar (logo/search) on video pages only */
+    ytm-mobile-topbar-renderer,
+    header.mobile-topbar-header {
+        display: none !important;
+    }
+    /* Remove top padding/margin everywhere */
+    ytm-app,
+    ytm-watch,
+    .page-container,
+    .watch-below-the-player,
+    ytm-player,
+    ytm-player-container,
+    .player-container,
+    .html5-video-player,
+    .html5-video-container,
+    #player-container-id,
+    .ytm-autonav-bar {
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+        top: 0 !important;
+    }
+    /* Hide Gemini Ask button and its container */
+    ytm-button-renderer[button-renderer][aria-label="Ask"],
+    button[aria-label="Ask"],
+    .ytm-gemini-button,
+    [data-a11y-title-text="Ask"],
+    ytm-button-renderer:has(button[aria-label="Ask"]) {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+    }
+    /* Force single row layout for video meta */
+    ytm-slim-video-metadata-section-renderer {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        gap: 8px !important;
+        padding: 8px !important;
+    }
+    /* Channel info compact */
+    ytm-slim-owner-renderer {
+        flex-shrink: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+    }
+    ytm-slim-owner-renderer #channel-thumbnail {
+        width: 28px !important;
+        height: 28px !important;
+    }
+    ytm-slim-owner-renderer #channel-name {
+        max-width: 80px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        font-size: 12px !important;
+    }
+    /* Hide subscriber count */
+    ytm-slim-owner-renderer #metadata {
+        display: none !important;
+    }
+    /* Compact subscribe button */
+    ytm-subscribe-button-renderer button {
+        padding: 4px 8px !important;
+        font-size: 11px !important;
+        min-width: unset !important;
+    }
+    /* Action bar inline */
+    ytm-slim-video-action-bar-renderer {
+        flex-shrink: 0 !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+    }
+    .slim-video-action-bar-actions {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 2px !important;
+    }
+    /* Hide ALL button text labels */
+    ytm-slim-video-action-bar-renderer .yt-spec-button-shape-next__button-text-content,
+    ytm-slim-video-action-bar-renderer [class*="button-text"],
+    ytm-slim-video-action-bar-renderer .cbox,
+    .slim-video-action-bar-actions span[class*="text"] {
+        display: none !important;
+    }
+    /* Tiny buttons */
+    ytm-slim-video-action-bar-renderer button,
+    ytm-slim-video-action-bar-renderer ytm-button-renderer {
+        padding: 4px !important;
+        min-width: unset !important;
+        margin: 0 !important;
+    }
+    ytm-slim-video-action-bar-renderer svg,
+    ytm-slim-video-action-bar-renderer .yt-icon {
+        width: 18px !important;
+        height: 18px !important;
+    }
+    /* Like/dislike group compact */
+    ytm-segmented-like-dislike-button-renderer {
+        display: flex !important;
+        gap: 0 !important;
+    }
+""".trimIndent()
+
+private fun injectCss(session: GeckoSession, isVideoPage: Boolean) {
+    val videoCss = if (isVideoPage) YOUTOOB_VIDEO_PAGE_CSS else ""
+    val fullCss = YOUTOOB_BASE_CSS + "\n" + videoCss
+
     val cssScript = """
         (function() {
             var style = document.getElementById('youtoob-custom-style');
             if (!style) {
                 style = document.createElement('style');
                 style.id = 'youtoob-custom-style';
-                style.textContent = `$HIDE_YOUTUBE_BOTTOM_NAV_CSS`;
                 document.head.appendChild(style);
             }
+            style.textContent = `$fullCss`;
         })();
     """.trimIndent()
 
@@ -66,7 +187,9 @@ private fun injectCss(session: GeckoSession) {
 fun GeckoViewScreen(
     modifier: Modifier = Modifier,
     navigateToUrl: String? = null,
-    onFullscreenChange: (Boolean) -> Unit = {}
+    onFullscreenChange: (Boolean) -> Unit = {},
+    onUrlChange: (String) -> Unit = {},
+    onSessionReady: (GeckoSession) -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -123,16 +246,17 @@ fun GeckoViewScreen(
             },
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
-                injectCss(session)
+                injectCss(session, currentUrl.contains("/watch"))
             },
             onUrlChange = { url, session ->
                 val wasVideoPage = currentUrl.contains("/watch")
                 val isVideoPage = url.contains("/watch")
                 currentUrl = url
-                // Inject on SPA navigation to video page
-                if (isVideoPage && !wasVideoPage) {
+                onUrlChange(url)
+                // Re-inject CSS on SPA navigation when video page state changes
+                if (isVideoPage != wasVideoPage) {
                     Handler(Looper.getMainLooper()).postDelayed({
-                        injectCss(session)
+                        injectCss(session, isVideoPage)
                     }, SPA_NAVIGATION_DELAY_MS)
                 }
             },
@@ -156,6 +280,7 @@ fun GeckoViewScreen(
     DisposableEffect(Unit) {
         session.open(runtime)
         session.loadUri(requireNotNull(NavDestination.HOME.youtubeUrl))
+        onSessionReady(session)
         onDispose {
             session.close()
         }
