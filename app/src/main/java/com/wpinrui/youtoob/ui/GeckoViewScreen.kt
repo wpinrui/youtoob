@@ -29,7 +29,7 @@ import com.wpinrui.youtoob.utils.PermissionBridge
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
-private const val TAG = "YoutoobPlayer"
+private const val TAG = "YTB_Player"
 
 private val HIDE_YOUTUBE_BOTTOM_NAV_CSS = """
     ytm-pivot-bar-renderer,
@@ -40,19 +40,6 @@ private val HIDE_YOUTUBE_BOTTOM_NAV_CSS = """
         padding-bottom: 0 !important;
     }
 """.trimIndent()
-
-private fun loadCustomPlayerJs(context: Context): String {
-    return try {
-        val js = context.assets.open("js/custom_player.js").bufferedReader().use { it.readText() }
-        android.util.Log.d(TAG, "Loaded custom_player.js: ${js.length} chars")
-        js
-    } catch (e: Exception) {
-        android.util.Log.e(TAG, "Failed to load custom_player.js", e)
-        ""
-    }
-}
-
-private var cachedPlayerJs: String? = null
 
 private fun injectScripts(session: GeckoSession, context: Context, isVideoPage: Boolean) {
     android.util.Log.d(TAG, "injectScripts called, isVideoPage=$isVideoPage")
