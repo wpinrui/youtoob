@@ -75,23 +75,12 @@ private val YOUTOOB_VIDEO_PAGE_CSS = """
         top: 0 !important;
     }
     /* Hide Gemini Ask button and collapse its space completely */
-    ytm-button-renderer[button-renderer][aria-label="Ask"],
     button[aria-label="Ask"],
-    .ytm-gemini-button,
-    [data-a11y-title-text="Ask"],
-    ytm-button-renderer:has(button[aria-label="Ask"]),
-    .slim-video-action-bar-actions > ytm-button-renderer:has(button[aria-label="Ask"]) {
+    yt-button-view-model:has(button[aria-label="Ask"]),
+    button-view-model:has(button[aria-label="Ask"]),
+    #flexible-item-buttons:has(button[aria-label="Ask"]),
+    ytm-button-renderer:has(button[aria-label="Ask"]) {
         display: none !important;
-        width: 0 !important;
-        height: 0 !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        overflow: hidden !important;
-        flex: 0 0 0 !important;
-        min-width: 0 !important;
-        max-width: 0 !important;
-        border: none !important;
-        gap: 0 !important;
     }
 """.trimIndent()
 
