@@ -1,4 +1,4 @@
-(function() {
+(function () {
     // Don't run if already injected
     if (window.youtoobPlayerInjected) return;
     window.youtoobPlayerInjected = true;
@@ -208,7 +208,7 @@
         }
         .youtoob-bottom-bar {
             position: absolute;
-            bottom: 45px;
+            bottom: 35px;
             right: 12px;
             display: flex;
             gap: 6px;
@@ -290,7 +290,7 @@
         /* Seek bar styles */
         .youtoob-seek-container {
             position: absolute;
-            bottom: 10px;
+            bottom: 0;
             left: 12px;
             right: 12px;
             display: flex;
@@ -305,7 +305,7 @@
         #youtoob-controls.fullscreen .youtoob-seek-container {
             bottom: 30px;
             left: 62px;
-            right: 62px;
+            right: 12px;
         }
         #youtoob-controls.show-controls .youtoob-seek-container {
             opacity: 1;
@@ -465,8 +465,8 @@
 
     function findPlayerContainer(video) {
         return document.querySelector('ytm-player') ||
-               document.querySelector('.html5-video-player') ||
-               video.parentElement;
+            document.querySelector('.html5-video-player') ||
+            video.parentElement;
     }
 
     function ensureRelativePositioning(container) {
@@ -664,7 +664,7 @@
         document.getElementById('youtoob-prev').addEventListener('click', (e) => {
             e.stopPropagation();
             const prevBtn = document.querySelector('.ytp-prev-button') ||
-                           document.querySelector('[aria-label*="Previous"]');
+                document.querySelector('[aria-label*="Previous"]');
             if (prevBtn) prevBtn.click();
             controls.show();
         });
@@ -672,7 +672,7 @@
         document.getElementById('youtoob-next').addEventListener('click', (e) => {
             e.stopPropagation();
             const nextBtn = document.querySelector('.ytp-next-button') ||
-                           document.querySelector('[aria-label*="Next"]');
+                document.querySelector('[aria-label*="Next"]');
             if (nextBtn) nextBtn.click();
             controls.show();
         });
@@ -689,8 +689,8 @@
         document.getElementById('youtoob-fullscreen').addEventListener('click', (e) => {
             e.stopPropagation();
             const ytFullscreen = document.querySelector('.ytp-fullscreen-button') ||
-                                document.querySelector('[aria-label*="ull screen"]') ||
-                                document.querySelector('button.fullscreen-icon');
+                document.querySelector('[aria-label*="ull screen"]') ||
+                document.querySelector('button.fullscreen-icon');
             if (ytFullscreen) {
                 ytFullscreen.click();
             } else {
