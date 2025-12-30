@@ -40,8 +40,7 @@ class MainActivity : ComponentActivity() {
                 val shouldShowNav = !isFullscreen && !isVideoPage
 
                 BackHandler(enabled = isVideoPage) {
-                    navigateToUrl = NavDestination.HOME.youtubeUrl
-                    currentDestination = NavDestination.HOME
+                    geckoSession?.goBack()
                 }
 
                 Scaffold(
