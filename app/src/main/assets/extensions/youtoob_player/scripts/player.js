@@ -207,27 +207,40 @@
             pointer-events: auto;
         }
         .youtoob-pill-btn {
-            background: rgba(0,0,0,0.6);
-            border: 1px solid rgba(255,255,255,0.3);
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.5);
             border-radius: 4px;
             color: white;
-            padding: 4px 8px;
+            padding: 0;
             font-size: 13px;
             font-weight: 500;
             cursor: pointer;
-            min-width: 36px;
+            min-width: 40px;
+            height: 28px;
+            line-height: 28px;
             text-align: center;
         }
         .youtoob-pill-btn:active {
             background: rgba(255,255,255,0.2);
         }
-        .youtoob-icon-btn {
-            padding: 4px;
-            min-width: 32px;
+        .youtoob-fullscreen-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 0;
+            cursor: pointer;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .youtoob-icon-btn svg {
-            width: 20px;
-            height: 20px;
+        .youtoob-fullscreen-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+        .youtoob-fullscreen-btn:active {
+            opacity: 0.7;
         }
         .youtoob-menu {
             position: absolute;
@@ -309,7 +322,7 @@
                         <div class="youtoob-menu-option" data-speed="2">2.0x</div>
                     </div>
                 </div>
-                <button class="youtoob-pill-btn youtoob-icon-btn" id="youtoob-fullscreen">${ICONS.fullscreen}</button>
+                <button class="youtoob-fullscreen-btn" id="youtoob-fullscreen">${ICONS.fullscreen}</button>
             </div>
         `;
     }
