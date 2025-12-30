@@ -28,7 +28,7 @@ import com.wpinrui.youtoob.utils.PermissionBridge
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
-private val HIDE_YOUTUBE_NAV_JS = """
+private val HIDE_YOUTUBE_BOTTOM_NAV_JS = """
 (function() {
     var style = document.getElementById('youtoob-custom-style');
     if (!style) {
@@ -48,8 +48,8 @@ private val HIDE_YOUTUBE_NAV_JS = """
 })();
 """.trimIndent()
 
-private fun injectCustomCss(session: GeckoSession) {
-    session.loadUri("javascript:$HIDE_YOUTUBE_NAV_JS")
+private fun injectCustomStyles(session: GeckoSession) {
+    session.loadUri("javascript:$HIDE_YOUTUBE_BOTTOM_NAV_JS")
 }
 
 @Composable
@@ -112,7 +112,7 @@ fun GeckoViewScreen(
             },
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
-                injectCustomCss(session)
+                injectCustomStyles(session)
             }
         )
     }
