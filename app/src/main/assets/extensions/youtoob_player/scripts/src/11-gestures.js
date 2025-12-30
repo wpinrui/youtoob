@@ -28,7 +28,7 @@ function setupGestures(video, overlay) {
         longPressTimer = setTimeout(() => {
             isLongPress = true;
             originalSpeed = video.playbackRate;
-            video.playbackRate = 2;
+            video.playbackRate = LONG_PRESS_SPEED_MULTIPLIER;
         }, LONG_PRESS_DELAY_MS);
     }
 
@@ -81,7 +81,7 @@ function setupGestures(video, overlay) {
     // Snap to fill or fit with animation
     function snapToFillMode(fill) {
         isFillMode = fill;
-        video.style.transition = 'transform 0.2s ease-out';
+        video.style.transition = `transform ${PINCH_SNAP_ANIMATION_MS}ms ease-out`;
         if (fill) {
             const scale = getFillScale();
             video.style.transform = `scale(${scale})`;
