@@ -23,13 +23,11 @@ function autoSetQuality() {
             return;
         }
 
-        // Find the best quality up to DEFAULT_QUALITY
-        const defaultIndex = QUALITY_PRIORITY.indexOf(DEFAULT_QUALITY);
+        // Find the highest available quality
         let targetQuality = null;
-
-        for (let i = defaultIndex; i < QUALITY_PRIORITY.length; i++) {
-            if (availableQualities.includes(QUALITY_PRIORITY[i])) {
-                targetQuality = QUALITY_PRIORITY[i];
+        for (const quality of QUALITY_PRIORITY) {
+            if (availableQualities.includes(quality)) {
+                targetQuality = quality;
                 break;
             }
         }

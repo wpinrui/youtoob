@@ -80,7 +80,7 @@ function createCustomControls(video) {
     setupTopBar(video, controls);
     setupGestures(video, overlay);
 
-    // Auto-set quality to 1080p (or best available)
+    // Auto-set to highest available quality
     autoSetQuality();
 
     // Menu toggle buttons

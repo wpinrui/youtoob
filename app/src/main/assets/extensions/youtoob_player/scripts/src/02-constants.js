@@ -23,8 +23,7 @@ const QUALITY_LABELS = {
 
 const FALLBACK_QUALITIES = ['hd1080', 'hd720', 'large', 'medium', 'small'];
 
-// Default quality to auto-set (highest available up to this level)
-const DEFAULT_QUALITY = 'hd1080';
+// Quality priority for auto-setting (highest first)
 const QUALITY_PRIORITY = ['hd2160', 'hd1440', 'hd1080', 'hd720', 'large', 'medium', 'small', 'tiny'];
 const AUTO_QUALITY_POLL_INTERVAL_MS = 100;
 const AUTO_QUALITY_MAX_ATTEMPTS = 50;
