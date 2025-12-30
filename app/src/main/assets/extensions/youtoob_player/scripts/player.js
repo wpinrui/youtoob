@@ -292,7 +292,7 @@
             right: 12px;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: flex-start;
             gap: 6px;
             opacity: 0;
             transition: opacity 0.2s;
@@ -316,18 +316,20 @@
             align-items: center;
             cursor: pointer;
             position: relative;
+            padding: 0 6px;
+            box-sizing: border-box;
         }
         .youtoob-seek-track {
             position: absolute;
-            left: 0;
-            right: 0;
+            left: 6px;
+            right: 6px;
             height: 3px;
             background: rgba(255,255,255,0.3);
             border-radius: 1.5px;
         }
         .youtoob-seek-buffer {
             position: absolute;
-            left: 0;
+            left: 6px;
             height: 3px;
             background: rgba(255,255,255,0.5);
             border-radius: 1.5px;
@@ -335,7 +337,7 @@
         }
         .youtoob-seek-progress {
             position: absolute;
-            left: 0;
+            left: 6px;
             height: 3px;
             background: #ff0000;
             border-radius: 1.5px;
@@ -348,7 +350,7 @@
             background: #ff0000;
             border-radius: 50%;
             transform: translateX(-50%);
-            left: 0%;
+            left: 6px;
             box-shadow: 0 0 4px rgba(0,0,0,0.3);
         }
         .youtoob-seek-bar:active .youtoob-seek-thumb {
@@ -749,26 +751,32 @@
         function updateProgress() {
             if (isSeeking) return;
             const percent = (video.currentTime / video.duration) * 100 || 0;
-            seekProgress.style.width = percent + '%';
-            seekThumb.style.left = percent + '%';
+            const trackWidth = seekBar.offsetWidth - 12; // account for 6px padding each side
+            const progressWidth = (percent / 100) * trackWidth;
+            seekProgress.style.width = progressWidth + 'px';
+            seekThumb.style.left = (6 + progressWidth) + 'px';
             updateTimeDisplay();
         }
 
         function updateBuffer() {
             if (video.buffered.length > 0) {
                 const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-                const percent = (bufferedEnd / video.duration) * 100 || 0;
-                seekBuffer.style.width = percent + '%';
+                const percent = (bufferedEnd / video.duration) || 0;
+                const trackWidth = seekBar.offsetWidth - 12;
+                seekBuffer.style.width = (percent * trackWidth) + 'px';
             }
         }
 
         function seekToPosition(clientX) {
             const rect = seekBar.getBoundingClientRect();
-            const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+            const trackWidth = rect.width - 12; // account for padding
+            const relativeX = clientX - rect.left - 6; // offset by left padding
+            const percent = Math.max(0, Math.min(1, relativeX / trackWidth));
             const time = percent * video.duration;
             video.currentTime = time;
-            seekProgress.style.width = (percent * 100) + '%';
-            seekThumb.style.left = (percent * 100) + '%';
+            const progressWidth = percent * trackWidth;
+            seekProgress.style.width = progressWidth + 'px';
+            seekThumb.style.left = (6 + progressWidth) + 'px';
             updateTimeDisplay();
         }
 
