@@ -208,7 +208,7 @@
         }
         .youtoob-bottom-bar {
             position: absolute;
-            bottom: 50px;
+            bottom: 45px;
             right: 12px;
             display: flex;
             gap: 6px;
@@ -219,7 +219,7 @@
             z-index: 100001;
         }
         #youtoob-controls.fullscreen .youtoob-bottom-bar {
-            bottom: 70px;
+            bottom: 65px;
         }
         #youtoob-controls.show-controls .youtoob-bottom-bar {
             pointer-events: auto;
