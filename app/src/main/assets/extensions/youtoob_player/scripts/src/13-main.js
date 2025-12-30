@@ -77,6 +77,7 @@ function createCustomControls(video) {
     setupSpeedMenu(video, elements.speedBtn, elements.speedMenu, controls);
     setupFullscreen(overlay, controls);
     setupSeekBar(video, controls);
+    setupTopBar(video, controls);
 
     // Menu toggle buttons
     elements.speedBtn.addEventListener('click', (e) => {

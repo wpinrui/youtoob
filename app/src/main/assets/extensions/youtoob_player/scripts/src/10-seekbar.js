@@ -2,8 +2,6 @@
 // Seek Bar Setup
 // =============================================================================
 
-const SEEK_BAR_PADDING = 6;
-
 function setupSeekBar(video, controls) {
     const seekBar = document.getElementById('youtoob-seek-bar');
     const seekProgress = document.getElementById('youtoob-seek-progress');
@@ -13,10 +11,6 @@ function setupSeekBar(video, controls) {
 
     let isSeeking = false;
 
-    function getTrackWidth(element) {
-        return element.offsetWidth - (SEEK_BAR_PADDING * 2);
-    }
-
     function updateTimeDisplay() {
         const current = formatTime(video.currentTime);
         const duration = formatTime(video.duration);
@@ -25,11 +19,11 @@ function setupSeekBar(video, controls) {
 
     function updateProgress() {
         if (isSeeking) return;
-        const percent = (video.currentTime / video.duration) * 100 || 0;
-        const trackWidth = getTrackWidth(seekBar);
-        const progressWidth = (percent / 100) * trackWidth;
+        const percent = (video.currentTime / video.duration) || 0;
+        const trackWidth = seekBar.offsetWidth;
+        const progressWidth = percent * trackWidth;
         seekProgress.style.width = progressWidth + 'px';
-        seekThumb.style.left = (SEEK_BAR_PADDING + progressWidth) + 'px';
+        seekThumb.style.left = progressWidth + 'px';
         updateTimeDisplay();
     }
 
@@ -37,21 +31,21 @@ function setupSeekBar(video, controls) {
         if (video.buffered.length > 0) {
             const bufferedEnd = video.buffered.end(video.buffered.length - 1);
             const percent = (bufferedEnd / video.duration) || 0;
-            const trackWidth = getTrackWidth(seekBar);
+            const trackWidth = seekBar.offsetWidth;
             seekBuffer.style.width = (percent * trackWidth) + 'px';
         }
     }
 
     function seekToPosition(clientX) {
         const rect = seekBar.getBoundingClientRect();
-        const trackWidth = rect.width - (SEEK_BAR_PADDING * 2);
-        const relativeX = clientX - rect.left - SEEK_BAR_PADDING;
+        const trackWidth = rect.width;
+        const relativeX = clientX - rect.left;
         const percent = Math.max(0, Math.min(1, relativeX / trackWidth));
         const time = percent * video.duration;
         video.currentTime = time;
         const progressWidth = percent * trackWidth;
         seekProgress.style.width = progressWidth + 'px';
-        seekThumb.style.left = (SEEK_BAR_PADDING + progressWidth) + 'px';
+        seekThumb.style.left = progressWidth + 'px';
         updateTimeDisplay();
     }
 

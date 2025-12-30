@@ -8,6 +8,18 @@ function getOverlayHTML() {
 
         <div class="youtoob-overlay-bg"></div>
 
+        <div class="youtoob-top-bar">
+            <div class="youtoob-video-info">
+                <div class="youtoob-video-title" id="youtoob-video-title"></div>
+                <div class="youtoob-channel-name" id="youtoob-channel-name"></div>
+            </div>
+            <div class="youtoob-top-actions">
+                <button class="youtoob-action-btn" id="youtoob-autoplay" title="Autoplay">${ICONS.autoplay}</button>
+                <button class="youtoob-action-btn" id="youtoob-loop" title="Loop">${ICONS.loop}</button>
+                <button class="youtoob-action-btn" id="youtoob-share" title="Share">${ICONS.share}</button>
+            </div>
+        </div>
+
         <div class="youtoob-tap-zones">
             <div class="youtoob-tap-zone" id="youtoob-left-zone">
                 <div class="youtoob-skip-indicator" id="youtoob-skip-back">

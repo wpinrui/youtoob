@@ -3,6 +3,27 @@
 // =============================================================================
 
 const PLAYER_STYLES = `
+    /* Force overflow visible on YouTube player containers for seek thumb */
+    ytm-player,
+    ytm-player-container,
+    ytm-media-item,
+    .html5-video-player,
+    .html5-video-container,
+    .video-stream,
+    .player-container,
+    .ytm-player-container,
+    ytm-single-video-watch-page-modern,
+    ytm-watch,
+    #player,
+    ytm-single-video-watch-page-modern > *,
+    .html5-video-player > *,
+    [class*="player"] {
+        overflow: visible !important;
+        clip: auto !important;
+        clip-path: none !important;
+        contain: none !important;
+    }
+
     /* Hide YouTube's native mobile controls */
     .player-controls-content,
     .ytp-chrome-bottom,
@@ -174,7 +195,7 @@ const PLAYER_STYLES = `
     }
     .youtoob-bottom-bar {
         position: absolute;
-        bottom: 35px;
+        bottom: 24px;
         right: 12px;
         display: flex;
         gap: 6px;
@@ -185,10 +206,102 @@ const PLAYER_STYLES = `
         z-index: 100001;
     }
     #youtoob-controls.fullscreen .youtoob-bottom-bar {
-        bottom: 65px;
+        bottom: 54px;
     }
     #youtoob-controls.show-controls .youtoob-bottom-bar {
         pointer-events: auto;
+    }
+    /* Top bar styles */
+    .youtoob-top-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 12px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        z-index: 100001;
+    }
+    #youtoob-controls.fullscreen .youtoob-top-bar {
+        padding: 20px 24px;
+    }
+    #youtoob-controls.show-controls .youtoob-top-bar {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    .youtoob-video-info {
+        flex: 1;
+        min-width: 0;
+        margin-right: 12px;
+        display: none;
+    }
+    #youtoob-controls.fullscreen .youtoob-video-info {
+        display: block;
+    }
+    .youtoob-video-title {
+        color: white;
+        font-size: 14px;
+        font-weight: 600;
+        font-family: Roboto, Arial, sans-serif;
+        line-height: 1.3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+        margin: 0;
+    }
+    .youtoob-channel-name {
+        color: rgba(255,255,255,0.7);
+        font-size: 12px;
+        font-weight: 400;
+        font-family: Roboto, Arial, sans-serif;
+        margin-top: 2px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+    }
+    #youtoob-controls.fullscreen .youtoob-video-title {
+        font-size: 18px;
+    }
+    #youtoob-controls.fullscreen .youtoob-channel-name {
+        font-size: 14px;
+    }
+    .youtoob-top-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+    .youtoob-action-btn {
+        background: transparent;
+        border: none;
+        color: white;
+        padding: 0;
+        cursor: pointer;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.9;
+    }
+    .youtoob-action-btn svg {
+        width: 22px;
+        height: 22px;
+    }
+    .youtoob-action-btn:active {
+        opacity: 0.6;
+    }
+    .youtoob-action-btn.active {
+        color: #3ea6ff;
     }
     .youtoob-pill-btn {
         background: transparent;
@@ -256,22 +369,23 @@ const PLAYER_STYLES = `
     /* Seek bar styles */
     .youtoob-seek-container {
         position: absolute;
-        bottom: 0;
-        left: 12px;
-        right: 12px;
+        bottom: -6px;
+        left: 0;
+        right: 0;
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        gap: 6px;
+        gap: 4px;
         opacity: 0;
         transition: opacity 0.2s;
         pointer-events: none;
         z-index: 100001;
+        overflow: visible;
     }
     #youtoob-controls.fullscreen .youtoob-seek-container {
         bottom: 30px;
-        left: 62px;
-        right: 12px;
+        left: 50px;
+        right: 0;
     }
     #youtoob-controls.show-controls .youtoob-seek-container {
         opacity: 1;
@@ -282,39 +396,41 @@ const PLAYER_STYLES = `
         font-size: 12px;
         font-weight: 500;
         font-family: Roboto, Arial, sans-serif;
+        margin-left: 12px;
     }
     .youtoob-seek-bar {
         width: 100%;
-        height: 24px;
+        height: 16px;
         display: flex;
-        align-items: center;
+        align-items: flex-end;
         cursor: pointer;
         position: relative;
-        padding: 0 6px;
+        padding: 0;
         box-sizing: border-box;
+        overflow: visible;
     }
     .youtoob-seek-track {
         position: absolute;
-        left: 6px;
-        right: 6px;
+        left: 0;
+        right: 0;
+        bottom: 6px;
         height: 3px;
         background: rgba(255,255,255,0.3);
-        border-radius: 1.5px;
     }
     .youtoob-seek-buffer {
         position: absolute;
-        left: 6px;
+        left: 0;
+        bottom: 6px;
         height: 3px;
         background: rgba(255,255,255,0.5);
-        border-radius: 1.5px;
         width: 0%;
     }
     .youtoob-seek-progress {
         position: absolute;
-        left: 6px;
+        left: 0;
+        bottom: 6px;
         height: 3px;
         background: #ff0000;
-        border-radius: 1.5px;
         width: 0%;
     }
     .youtoob-seek-thumb {
@@ -324,12 +440,14 @@ const PLAYER_STYLES = `
         background: #ff0000;
         border-radius: 50%;
         transform: translateX(-50%);
-        left: 6px;
+        left: 0;
+        bottom: 1.5px;
         box-shadow: 0 0 4px rgba(0,0,0,0.3);
     }
     .youtoob-seek-bar:active .youtoob-seek-thumb {
         width: 16px;
         height: 16px;
+        bottom: 0.5px;
     }
     .youtoob-seek-bar:active .youtoob-seek-track,
     .youtoob-seek-bar:active .youtoob-seek-buffer,
