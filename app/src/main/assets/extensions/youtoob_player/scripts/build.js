@@ -27,8 +27,14 @@ const contents = sourceFiles.map(file => {
     return fs.readFileSync(filePath, 'utf8');
 });
 
-// Wrap in IIFE with 'use strict'
-const output = `(function () {
+// Wrap in IIFE with 'use strict' and add header comment
+const output = `/**
+ * AUTO-GENERATED FILE - DO NOT EDIT
+ *
+ * Edit source files in src/ instead, then run: node build.js
+ * Generated: ${new Date().toISOString()}
+ */
+(function () {
     'use strict';
 
 ${contents.join('\n\n')}
