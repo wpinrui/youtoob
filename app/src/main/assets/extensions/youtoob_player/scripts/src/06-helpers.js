@@ -44,3 +44,9 @@ function formatTime(seconds) {
     }
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
+
+function getYouTubeFullscreenButton() {
+    return document.querySelector('.ytp-fullscreen-button') ||
+        document.querySelector('[aria-label*="ull screen"]') ||
+        document.querySelector('button.fullscreen-icon');
+}

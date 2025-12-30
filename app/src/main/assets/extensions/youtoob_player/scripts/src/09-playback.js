@@ -43,7 +43,7 @@ function setupPlaybackControls(video, playPauseBtn, controls) {
 
     // Initial check and periodic updates
     updateNavButtonStates();
-    setInterval(updateNavButtonStates, 2000);
+    setInterval(updateNavButtonStates, NAV_BUTTON_POLL_INTERVAL_MS);
 
     prevEl.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -71,9 +71,7 @@ function setupPlaybackControls(video, playPauseBtn, controls) {
 function setupFullscreen(overlay, controls) {
     document.getElementById('youtoob-fullscreen').addEventListener('click', (e) => {
         e.stopPropagation();
-        const ytFullscreen = document.querySelector('.ytp-fullscreen-button') ||
-            document.querySelector('[aria-label*="ull screen"]') ||
-            document.querySelector('button.fullscreen-icon');
+        const ytFullscreen = getYouTubeFullscreenButton();
         if (ytFullscreen) {
             ytFullscreen.click();
         } else {

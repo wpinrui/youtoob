@@ -17,10 +17,7 @@ function setupGestures(video, overlay) {
     let initialPinchDistance = 0;
     let isFillMode = false; // false = fit (contain), true = fill (cover)
 
-    const DRAG_THRESHOLD = 20;  // Min distance to start progressive drag
-    const COMPLETE_THRESHOLD = 60;  // Distance to complete fullscreen toggle
-    const LONG_PRESS_DELAY = 400;  // ms to trigger long press
-    const PINCH_THRESHOLD = 50;  // Min distance change to toggle fill mode
+    // Constants defined in 02-constants.js: DRAG_THRESHOLD, COMPLETE_THRESHOLD, LONG_PRESS_DELAY_MS, PINCH_THRESHOLD
 
     // Get the video element for transforms
     function getVideoElement() {
@@ -37,7 +34,7 @@ function setupGestures(video, overlay) {
             isLongPress = true;
             originalSpeed = video.playbackRate;
             video.playbackRate = 2;
-        }, LONG_PRESS_DELAY);
+        }, LONG_PRESS_DELAY_MS);
     }
 
     function cancelLongPress() {
@@ -144,14 +141,7 @@ function setupGestures(video, overlay) {
         }
     }
 
-    // Find YouTube's fullscreen button
-    function getYouTubeFullscreenButton() {
-        return document.querySelector('.ytp-fullscreen-button') ||
-            document.querySelector('[aria-label*="ull screen"]') ||
-            document.querySelector('button.fullscreen-icon');
-    }
-
-    // Toggle fullscreen via YouTube's button
+    // Toggle fullscreen via YouTube's button (uses getYouTubeFullscreenButton from 06-helpers.js)
     function toggleFullscreen() {
         const ytBtn = getYouTubeFullscreenButton();
         if (ytBtn) {

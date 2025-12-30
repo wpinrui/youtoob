@@ -22,3 +22,15 @@ const QUALITY_LABELS = {
 };
 
 const FALLBACK_QUALITIES = ['hd1080', 'hd720', 'large', 'medium', 'small'];
+
+// Polling and delay constants
+const NAV_BUTTON_POLL_INTERVAL_MS = 2000;
+const VIDEO_INFO_DELAY_MS = 500;
+const AUTOPLAY_POLL_INTERVAL_MS = 1000;
+const LOOP_THRESHOLD_SECONDS = 0.3;
+
+// Gesture constants
+const DRAG_THRESHOLD = 20;
+const COMPLETE_THRESHOLD = 60;
+const LONG_PRESS_DELAY_MS = 400;
+const PINCH_THRESHOLD = 50;

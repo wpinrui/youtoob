@@ -50,7 +50,7 @@ function setupTopBar(video, controls) {
     }
 
     // Initial update with slight delay to ensure DOM is ready
-    setTimeout(updateVideoInfo, 500);
+    setTimeout(updateVideoInfo, VIDEO_INFO_DELAY_MS);
 
     // Track loop state ourselves (video.loop doesn't work reliably with YouTube)
     let loopEnabled = false;
@@ -109,7 +109,7 @@ function setupTopBar(video, controls) {
     // Poll to disable YouTube autoplay (it may re-enable)
     const autoplayCheckInterval = setInterval(() => {
         disableYouTubeAutoplay();
-    }, 1000);
+    }, AUTOPLAY_POLL_INTERVAL_MS);
 
     // Initial attempts
     disableYouTubeAutoplay();
@@ -122,8 +122,8 @@ function setupTopBar(video, controls) {
     // Use timeupdate to loop BEFORE video ends (prevents YouTube's ended handler)
     video.addEventListener('timeupdate', () => {
         if (loopEnabled && video.duration > 0) {
-            // If within 0.3 seconds of end, loop now
-            if (video.currentTime >= video.duration - 0.3) {
+            // If within threshold of end, loop now
+            if (video.currentTime >= video.duration - LOOP_THRESHOLD_SECONDS) {
                 video.currentTime = 0;
                 video.play();
             }
