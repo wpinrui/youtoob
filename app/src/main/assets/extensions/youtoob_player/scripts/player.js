@@ -694,10 +694,19 @@
             } else {
                 const videoEl = document.querySelector('video');
                 if (videoEl) {
-                    if (document.fullscreenElement) {
-                        document.exitFullscreen();
+                    const fsElement = document.fullscreenElement || document.webkitFullscreenElement;
+                    if (fsElement) {
+                        if (document.exitFullscreen) {
+                            document.exitFullscreen();
+                        } else if (document.webkitExitFullscreen) {
+                            document.webkitExitFullscreen();
+                        }
                     } else {
-                        videoEl.requestFullscreen();
+                        if (videoEl.requestFullscreen) {
+                            videoEl.requestFullscreen();
+                        } else if (videoEl.webkitRequestFullscreen) {
+                            videoEl.webkitRequestFullscreen();
+                        }
                     }
                 }
             }
@@ -707,11 +716,13 @@
         // Remove previous fullscreen handler if exists
         if (currentFullscreenHandler) {
             document.removeEventListener('fullscreenchange', currentFullscreenHandler);
+            document.removeEventListener('webkitfullscreenchange', currentFullscreenHandler);
         }
 
         currentFullscreenHandler = () => {
-            if (document.fullscreenElement) {
-                document.fullscreenElement.appendChild(overlay);
+            const fsElement = document.fullscreenElement || document.webkitFullscreenElement;
+            if (fsElement) {
+                fsElement.appendChild(overlay);
                 overlay.classList.add('fullscreen');
             } else {
                 playerContainer.appendChild(overlay);
@@ -721,6 +732,7 @@
         };
 
         document.addEventListener('fullscreenchange', currentFullscreenHandler);
+        document.addEventListener('webkitfullscreenchange', currentFullscreenHandler);
     }
 
     // =============================================================================
