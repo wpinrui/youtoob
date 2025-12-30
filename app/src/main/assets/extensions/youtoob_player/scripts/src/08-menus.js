@@ -28,58 +28,49 @@ function getYoutoobSettings() {
 // Auto Quality Setting
 // =============================================================================
 
+function findBestAvailableQuality(availableQualities, preferredQuality) {
+    if (availableQualities.includes(preferredQuality)) {
+        return preferredQuality;
+    }
+    const qualityIndex = QUALITY_PRIORITY.indexOf(preferredQuality);
+    if (qualityIndex === -1) return null;
+
+    for (let i = qualityIndex; i < QUALITY_PRIORITY.length; i++) {
+        if (availableQualities.includes(QUALITY_PRIORITY[i])) {
+            return QUALITY_PRIORITY[i];
+        }
+    }
+    return null;
+}
+
 function autoSetQuality() {
     const settings = getYoutoobSettings();
     const preferredQuality = settings.defaultQuality;
 
-    // If user prefers auto, don't set quality
-    if (preferredQuality === 'auto') {
-        return;
-    }
+    if (preferredQuality === 'auto') return;
 
     let attempts = 0;
     const interval = setInterval(() => {
         attempts++;
         const ytPlayer = document.querySelector('.html5-video-player');
+        const hasPlayerApi = ytPlayer?.getAvailableQualityLevels && ytPlayer?.setPlaybackQualityRange;
 
-        if (!ytPlayer || !ytPlayer.getAvailableQualityLevels || !ytPlayer.setPlaybackQualityRange) {
-            if (attempts >= AUTO_QUALITY_MAX_ATTEMPTS) {
-                clearInterval(interval);
-            }
+        if (!hasPlayerApi) {
+            if (attempts >= AUTO_QUALITY_MAX_ATTEMPTS) clearInterval(interval);
             return;
         }
 
         const availableQualities = ytPlayer.getAvailableQualityLevels();
-        if (!availableQualities || availableQualities.length === 0) {
-            if (attempts >= AUTO_QUALITY_MAX_ATTEMPTS) {
-                clearInterval(interval);
-            }
+        if (!availableQualities?.length) {
+            if (attempts >= AUTO_QUALITY_MAX_ATTEMPTS) clearInterval(interval);
             return;
         }
 
-        // Find the preferred quality or next best available
-        let targetQuality = null;
-
-        // First try to get the exact preferred quality
-        if (availableQualities.includes(preferredQuality)) {
-            targetQuality = preferredQuality;
-        } else {
-            // Find the closest lower quality
-            const qualityIndex = QUALITY_PRIORITY.indexOf(preferredQuality);
-            if (qualityIndex !== -1) {
-                for (let i = qualityIndex; i < QUALITY_PRIORITY.length; i++) {
-                    if (availableQualities.includes(QUALITY_PRIORITY[i])) {
-                        targetQuality = QUALITY_PRIORITY[i];
-                        break;
-                    }
-                }
-            }
-        }
-
+        const targetQuality = findBestAvailableQuality(availableQualities, preferredQuality);
         if (targetQuality) {
             ytPlayer.setPlaybackQualityRange(targetQuality, targetQuality);
-            clearInterval(interval);
-        } else if (attempts >= AUTO_QUALITY_MAX_ATTEMPTS) {
+        }
+        if (targetQuality || attempts >= AUTO_QUALITY_MAX_ATTEMPTS) {
             clearInterval(interval);
         }
     }, AUTO_QUALITY_POLL_INTERVAL_MS);
@@ -93,8 +84,7 @@ function autoSetSpeed(video) {
     const settings = getYoutoobSettings();
     const preferredSpeed = settings.defaultSpeed;
 
-    // Only set if different from default
-    if (preferredSpeed !== 1.0 && video) {
+    if (preferredSpeed !== DEFAULT_SPEED && video) {
         video.playbackRate = preferredSpeed;
     }
 }
