@@ -6,11 +6,12 @@ import com.wpinrui.youtoob.extensions.ExtensionManager
 import org.mozilla.geckoview.AllowOrDeny
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
+import org.mozilla.geckoview.GeckoRuntimeSettings
 import org.mozilla.geckoview.WebExtension
 import org.mozilla.geckoview.WebExtensionController
 
 object GeckoRuntimeProvider {
-    private const val TAG = "GeckoRuntimeProvider"
+    private const val TAG = "YTB_Runtime"
 
     @Volatile
     private var runtime: GeckoRuntime? = null
@@ -20,12 +21,20 @@ object GeckoRuntimeProvider {
 
     fun getRuntime(context: Context): GeckoRuntime {
         return runtime ?: synchronized(this) {
-            runtime ?: GeckoRuntime.create(context.applicationContext).also { newRuntime ->
+            runtime ?: createRuntime(context.applicationContext).also { newRuntime ->
                 runtime = newRuntime
                 setupPromptDelegate(newRuntime)
                 loadExtensions(context.applicationContext, newRuntime)
             }
         }
+    }
+
+    private fun createRuntime(context: Context): GeckoRuntime {
+        val settings = GeckoRuntimeSettings.Builder()
+            .consoleOutput(true)  // Forward JS console to logcat
+            .remoteDebuggingEnabled(true)  // Enable remote debugging
+            .build()
+        return GeckoRuntime.create(context, settings)
     }
 
     private fun setupPromptDelegate(runtime: GeckoRuntime) {
