@@ -29,6 +29,8 @@ import com.wpinrui.youtoob.utils.PermissionBridge
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
+private const val TAG = "YoutoobPlayer"
+
 private val HIDE_YOUTUBE_BOTTOM_NAV_CSS = """
     ytm-pivot-bar-renderer,
     ytm-pivot-bar-item-renderer {
@@ -41,9 +43,11 @@ private val HIDE_YOUTUBE_BOTTOM_NAV_CSS = """
 
 private fun loadCustomPlayerJs(context: Context): String {
     return try {
-        context.assets.open("js/custom_player.js").bufferedReader().use { it.readText() }
+        val js = context.assets.open("js/custom_player.js").bufferedReader().use { it.readText() }
+        android.util.Log.d(TAG, "Loaded custom_player.js: ${js.length} chars")
+        js
     } catch (e: Exception) {
-        android.util.Log.e("Youtoob", "Failed to load custom_player.js", e)
+        android.util.Log.e(TAG, "Failed to load custom_player.js", e)
         ""
     }
 }
@@ -51,20 +55,27 @@ private fun loadCustomPlayerJs(context: Context): String {
 private var cachedPlayerJs: String? = null
 
 private fun injectScripts(session: GeckoSession, context: Context, isVideoPage: Boolean) {
+    android.util.Log.d(TAG, "injectScripts called, isVideoPage=$isVideoPage")
+
     // CSS injection
     val cssScript = """
         (function() {
+            console.log('[YoutoobPlayer] CSS injection running');
             var style = document.getElementById('youtoob-custom-style');
             if (!style) {
                 style = document.createElement('style');
                 style.id = 'youtoob-custom-style';
                 style.textContent = `$HIDE_YOUTUBE_BOTTOM_NAV_CSS`;
                 document.head.appendChild(style);
+                console.log('[YoutoobPlayer] CSS style added');
+            } else {
+                console.log('[YoutoobPlayer] CSS style already exists');
             }
         })();
     """.trimIndent()
 
     if (!isVideoPage) {
+        android.util.Log.d(TAG, "Not a video page, injecting CSS only")
         session.loadUri("javascript:$cssScript")
         return
     }
@@ -76,18 +87,23 @@ private fun injectScripts(session: GeckoSession, context: Context, isVideoPage: 
     val playerJs = cachedPlayerJs ?: ""
 
     if (playerJs.isEmpty()) {
+        android.util.Log.e(TAG, "Player JS is empty, injecting CSS only")
         session.loadUri("javascript:$cssScript")
         return
     }
+
+    android.util.Log.d(TAG, "Player JS loaded, ${playerJs.length} chars")
 
     // Convert to Base64 to avoid encoding issues
     val base64Js = android.util.Base64.encodeToString(
         playerJs.toByteArray(Charsets.UTF_8),
         android.util.Base64.NO_WRAP
     )
+    android.util.Log.d(TAG, "Base64 encoded, ${base64Js.length} chars")
 
     val combinedScript = """
         (function() {
+            console.log('[YoutoobPlayer] Combined script starting');
             // CSS
             var style = document.getElementById('youtoob-custom-style');
             if (!style) {
@@ -95,20 +111,29 @@ private fun injectScripts(session: GeckoSession, context: Context, isVideoPage: 
                 style.id = 'youtoob-custom-style';
                 style.textContent = `$HIDE_YOUTUBE_BOTTOM_NAV_CSS`;
                 document.head.appendChild(style);
+                console.log('[YoutoobPlayer] CSS added');
             }
             // Player - decode from base64 and eval
+            console.log('[YoutoobPlayer] youtoobPlayerInjected=' + window.youtoobPlayerInjected);
             if (!window.youtoobPlayerInjected) {
                 try {
+                    console.log('[YoutoobPlayer] Decoding base64...');
                     var code = atob('$base64Js');
+                    console.log('[YoutoobPlayer] Decoded ' + code.length + ' chars, evaluating...');
                     eval(code);
+                    console.log('[YoutoobPlayer] Eval complete');
                 } catch(e) {
-                    console.error('Youtoob player injection failed:', e);
+                    console.error('[YoutoobPlayer] Injection failed:', e);
                 }
+            } else {
+                console.log('[YoutoobPlayer] Already injected, skipping');
             }
         })();
     """.trimIndent()
 
+    android.util.Log.d(TAG, "Calling loadUri with javascript: scheme")
     session.loadUri("javascript:$combinedScript")
+    android.util.Log.d(TAG, "loadUri called")
 }
 
 @Composable
@@ -172,9 +197,11 @@ fun GeckoViewScreen(
             },
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
+                android.util.Log.d(TAG, "onPageLoaded, currentUrl=$currentUrl")
                 injectScripts(session, context, currentUrl.contains("/watch"))
             },
             onUrlChange = { url ->
+                android.util.Log.d(TAG, "onUrlChange: $url")
                 currentUrl = url
             }
         )
