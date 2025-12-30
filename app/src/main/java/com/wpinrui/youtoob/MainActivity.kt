@@ -1,5 +1,6 @@
 package com.wpinrui.youtoob
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -7,8 +8,16 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.wpinrui.youtoob.ui.DownloadsActivity
 import com.wpinrui.youtoob.ui.GeckoViewScreen
+import com.wpinrui.youtoob.ui.SettingsActivity
+import com.wpinrui.youtoob.ui.components.YoutoobBottomNav
+import com.wpinrui.youtoob.ui.navigation.NavDestination
 import com.wpinrui.youtoob.ui.theme.YouToobTheme
 
 class MainActivity : ComponentActivity() {
@@ -17,8 +26,40 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             YouToobTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    GeckoViewScreen(modifier = Modifier.padding(innerPadding))
+                var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
+                var navigateToUrl by remember { mutableStateOf<String?>(null) }
+                var isFullscreen by remember { mutableStateOf(false) }
+
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    bottomBar = {
+                        YoutoobBottomNav(
+                            currentDestination = currentDestination,
+                            onNavigate = { destination ->
+                                currentDestination = destination
+                                when {
+                                    destination.isYouTubeDestination -> {
+                                        navigateToUrl = destination.youtubeUrl
+                                    }
+                                    destination == NavDestination.DOWNLOADS -> {
+                                        startActivity(Intent(this@MainActivity, DownloadsActivity::class.java))
+                                    }
+                                    destination == NavDestination.SETTINGS -> {
+                                        startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+                                    }
+                                }
+                            },
+                            isVisible = !isFullscreen
+                        )
+                    }
+                ) { innerPadding ->
+                    GeckoViewScreen(
+                        modifier = Modifier.padding(innerPadding),
+                        navigateToUrl = navigateToUrl,
+                        onFullscreenChange = { fullscreen ->
+                            isFullscreen = fullscreen
+                        }
+                    )
                 }
             }
         }
