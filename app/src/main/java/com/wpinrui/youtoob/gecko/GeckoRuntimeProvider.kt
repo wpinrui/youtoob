@@ -39,25 +39,21 @@ object GeckoRuntimeProvider {
 
     private fun setupPromptDelegate(runtime: GeckoRuntime) {
         runtime.webExtensionController.promptDelegate = object : WebExtensionController.PromptDelegate {
-            override fun onInstallPrompt(extension: WebExtension): GeckoResult<AllowOrDeny>? {
-                Log.i(TAG, "Auto-allowing extension install: ${extension.metaData?.name}")
-                return GeckoResult.fromValue(AllowOrDeny.ALLOW)
-            }
-
             override fun onUpdatePrompt(
-                current: WebExtension,
-                updated: WebExtension,
-                newPermissions: Array<out String>,
-                newOrigins: Array<out String>
+                extension: WebExtension,
+                permissions: Array<out String>,
+                origins: Array<out String>,
+                newPermissions: Array<out String>
             ): GeckoResult<AllowOrDeny>? {
-                Log.i(TAG, "Auto-allowing extension update: ${updated.metaData?.name}")
+                Log.i(TAG, "Auto-allowing extension update: ${extension.metaData?.name}")
                 return GeckoResult.fromValue(AllowOrDeny.ALLOW)
             }
 
             override fun onOptionalPrompt(
                 extension: WebExtension,
                 permissions: Array<out String>,
-                origins: Array<out String>
+                origins: Array<out String>,
+                optionalPermissions: Array<out String>
             ): GeckoResult<AllowOrDeny>? {
                 Log.i(TAG, "Auto-allowing optional permissions for: ${extension.metaData?.name}")
                 return GeckoResult.fromValue(AllowOrDeny.ALLOW)
