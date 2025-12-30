@@ -101,8 +101,8 @@ function setupGestures(video, overlay) {
             // Scale video and translate up as user drags (fills toward notification bar)
             if (deltaY < -DRAG_THRESHOLD) {
                 const progress = Math.min(Math.abs(deltaY + DRAG_THRESHOLD) / COMPLETE_THRESHOLD, 1);
-                const scale = 1 + (progress * 0.3); // Scale up to 1.3x for dramatic effect
-                const translateY = -progress * 20; // Move up toward notification bar
+                const scale = 1 + (progress * DRAG_SCALE_FACTOR);
+                const translateY = -progress * DRAG_TRANSLATE_Y;
                 video.style.transition = 'none';
                 video.style.transform = `scale(${scale}) translateY(${translateY}px)`;
                 video.style.transformOrigin = 'center center';
@@ -111,10 +111,10 @@ function setupGestures(video, overlay) {
             // Fullscreen mode: dragging DOWN to exit
             // Translate video down as user drags
             if (deltaY > DRAG_THRESHOLD) {
-                const translateY = Math.min(deltaY - DRAG_THRESHOLD, COMPLETE_THRESHOLD * 1.5);
-                const scale = 1 - (translateY / (COMPLETE_THRESHOLD * 10)); // Slight scale down
+                const translateY = Math.min(deltaY - DRAG_THRESHOLD, COMPLETE_THRESHOLD * EXIT_FULLSCREEN_TRANSLATE_LIMIT);
+                const scale = 1 - (translateY / (COMPLETE_THRESHOLD * EXIT_FULLSCREEN_SCALE_DIVISOR));
                 video.style.transition = 'none';
-                video.style.transform = `translateY(${translateY}px) scale(${Math.max(scale, 0.9)})`;
+                video.style.transform = `translateY(${translateY}px) scale(${Math.max(scale, EXIT_FULLSCREEN_MIN_SCALE)})`;
                 video.style.transformOrigin = 'center top';
             }
         }
@@ -123,7 +123,7 @@ function setupGestures(video, overlay) {
     // Reset transform with animation
     function resetTransform(animate = true) {
         if (animate) {
-            video.style.transition = 'transform 0.25s ease-out';
+            video.style.transition = `transform ${TRANSFORM_ANIMATION_MS}ms ease-out`;
         }
         video.style.transform = '';
         video.style.transformOrigin = '';
@@ -131,7 +131,7 @@ function setupGestures(video, overlay) {
         if (animate) {
             setTimeout(() => {
                 video.style.transition = '';
-            }, 250);
+            }, TRANSFORM_ANIMATION_MS);
         }
     }
 
@@ -229,7 +229,7 @@ function setupGestures(video, overlay) {
         const absY = Math.abs(deltaY);
 
         // Cancel long press if user moves significantly
-        if (absX > 15 || absY > 15) {
+        if (absX > LONG_PRESS_CANCEL_THRESHOLD || absY > LONG_PRESS_CANCEL_THRESHOLD) {
             if (longPressTimer) {
                 clearTimeout(longPressTimer);
                 longPressTimer = null;
