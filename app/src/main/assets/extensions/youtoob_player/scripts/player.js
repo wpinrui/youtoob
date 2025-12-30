@@ -77,6 +77,20 @@
             -webkit-touch-callout: none;
             -webkit-tap-highlight-color: transparent;
         }
+        .youtoob-overlay-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.4);
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+        #youtoob-controls.show-controls .youtoob-overlay-bg {
+            opacity: 1;
+        }
         #youtoob-controls.show-controls .youtoob-center-controls {
             opacity: 1;
         }
@@ -278,6 +292,8 @@
     function getOverlayHTML() {
         return `
             <style>${PLAYER_STYLES}</style>
+
+            <div class="youtoob-overlay-bg"></div>
 
             <div class="youtoob-tap-zones">
                 <div class="youtoob-tap-zone" id="youtoob-left-zone">
