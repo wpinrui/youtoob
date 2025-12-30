@@ -284,6 +284,89 @@
             color: #3ea6ff;
             font-weight: bold;
         }
+        /* Seek bar styles */
+        .youtoob-seek-container {
+            position: absolute;
+            bottom: 48px;
+            left: 12px;
+            right: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            z-index: 100001;
+        }
+        #youtoob-controls.show-controls .youtoob-seek-container {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .youtoob-time {
+            color: white;
+            font-size: 12px;
+            font-weight: 500;
+            min-width: 40px;
+            text-align: center;
+            font-family: Roboto, Arial, sans-serif;
+        }
+        .youtoob-time-current {
+            text-align: right;
+        }
+        .youtoob-time-duration {
+            text-align: left;
+        }
+        .youtoob-seek-bar {
+            flex: 1;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+        }
+        .youtoob-seek-track {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 1.5px;
+        }
+        .youtoob-seek-buffer {
+            position: absolute;
+            left: 0;
+            height: 3px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 1.5px;
+            width: 0%;
+        }
+        .youtoob-seek-progress {
+            position: absolute;
+            left: 0;
+            height: 3px;
+            background: #ff0000;
+            border-radius: 1.5px;
+            width: 0%;
+        }
+        .youtoob-seek-thumb {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #ff0000;
+            border-radius: 50%;
+            transform: translateX(-50%);
+            left: 0%;
+            box-shadow: 0 0 4px rgba(0,0,0,0.3);
+        }
+        .youtoob-seek-bar:active .youtoob-seek-thumb {
+            width: 16px;
+            height: 16px;
+        }
+        .youtoob-seek-bar:active .youtoob-seek-track,
+        .youtoob-seek-bar:active .youtoob-seek-buffer,
+        .youtoob-seek-bar:active .youtoob-seek-progress {
+            height: 5px;
+        }
     `;
 
     // =============================================================================
@@ -320,6 +403,17 @@
                 <button class="youtoob-btn youtoob-btn-small" id="youtoob-prev">${ICONS.prev}</button>
                 <button class="youtoob-btn youtoob-btn-large" id="youtoob-play-pause">${ICONS.play}</button>
                 <button class="youtoob-btn youtoob-btn-small" id="youtoob-next">${ICONS.next}</button>
+            </div>
+
+            <div class="youtoob-seek-container">
+                <span class="youtoob-time youtoob-time-current" id="youtoob-time-current">0:00</span>
+                <div class="youtoob-seek-bar" id="youtoob-seek-bar">
+                    <div class="youtoob-seek-track"></div>
+                    <div class="youtoob-seek-buffer" id="youtoob-seek-buffer"></div>
+                    <div class="youtoob-seek-progress" id="youtoob-seek-progress"></div>
+                    <div class="youtoob-seek-thumb" id="youtoob-seek-thumb"></div>
+                </div>
+                <span class="youtoob-time youtoob-time-duration" id="youtoob-time-duration">0:00</span>
             </div>
 
             <div class="youtoob-bottom-bar">
@@ -378,6 +472,17 @@
         if (style.position === 'static') {
             container.style.position = 'relative';
         }
+    }
+
+    function formatTime(seconds) {
+        if (!isFinite(seconds) || seconds < 0) return '0:00';
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+        if (hrs > 0) {
+            return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
     // =============================================================================
@@ -631,6 +736,106 @@
     }
 
     // =============================================================================
+    // Seek Bar Setup
+    // =============================================================================
+
+    function setupSeekBar(video, controls) {
+        const seekBar = document.getElementById('youtoob-seek-bar');
+        const seekProgress = document.getElementById('youtoob-seek-progress');
+        const seekBuffer = document.getElementById('youtoob-seek-buffer');
+        const seekThumb = document.getElementById('youtoob-seek-thumb');
+        const timeCurrent = document.getElementById('youtoob-time-current');
+        const timeDuration = document.getElementById('youtoob-time-duration');
+
+        let isSeeking = false;
+
+        function updateProgress() {
+            if (isSeeking) return;
+            const percent = (video.currentTime / video.duration) * 100 || 0;
+            seekProgress.style.width = percent + '%';
+            seekThumb.style.left = percent + '%';
+            timeCurrent.textContent = formatTime(video.currentTime);
+        }
+
+        function updateBuffer() {
+            if (video.buffered.length > 0) {
+                const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+                const percent = (bufferedEnd / video.duration) * 100 || 0;
+                seekBuffer.style.width = percent + '%';
+            }
+        }
+
+        function updateDuration() {
+            timeDuration.textContent = formatTime(video.duration);
+        }
+
+        function seekToPosition(clientX) {
+            const rect = seekBar.getBoundingClientRect();
+            const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+            const time = percent * video.duration;
+            video.currentTime = time;
+            seekProgress.style.width = (percent * 100) + '%';
+            seekThumb.style.left = (percent * 100) + '%';
+            timeCurrent.textContent = formatTime(time);
+        }
+
+        // Touch events for seeking
+        seekBar.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+            isSeeking = true;
+            seekToPosition(e.touches[0].clientX);
+            controls.show();
+        });
+
+        seekBar.addEventListener('touchmove', (e) => {
+            if (isSeeking) {
+                e.preventDefault();
+                seekToPosition(e.touches[0].clientX);
+            }
+        });
+
+        seekBar.addEventListener('touchend', () => {
+            isSeeking = false;
+        });
+
+        // Mouse events (for testing on desktop)
+        seekBar.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            isSeeking = true;
+            seekToPosition(e.clientX);
+            controls.show();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isSeeking) {
+                seekToPosition(e.clientX);
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isSeeking = false;
+        });
+
+        // Click to seek
+        seekBar.addEventListener('click', (e) => {
+            e.stopPropagation();
+            seekToPosition(e.clientX);
+            controls.show();
+        });
+
+        // Video event listeners
+        video.addEventListener('timeupdate', updateProgress);
+        video.addEventListener('progress', updateBuffer);
+        video.addEventListener('loadedmetadata', updateDuration);
+        video.addEventListener('durationchange', updateDuration);
+
+        // Initial update
+        updateProgress();
+        updateBuffer();
+        updateDuration();
+    }
+
+    // =============================================================================
     // Main Setup Function
     // =============================================================================
 
@@ -692,6 +897,7 @@
         setupQualityMenu(elements.qualityMenu, controls);
         setupSpeedMenu(video, elements.speedBtn, elements.speedMenu, controls);
         setupFullscreen(overlay, playerContainer, controls);
+        setupSeekBar(video, controls);
 
         // Menu toggle buttons
         elements.speedBtn.addEventListener('click', (e) => {
