@@ -57,6 +57,7 @@
             bottom: 0 !important;
             z-index: 99999 !important;
             pointer-events: none;
+            overflow: visible;
             -webkit-user-select: none;
             user-select: none;
             -webkit-touch-callout: none;
@@ -77,6 +78,7 @@
             display: flex;
             pointer-events: auto;
             z-index: 100000;
+            overflow: visible;
         }
         .youtoob-tap-zone {
             flex: 1;
@@ -101,11 +103,11 @@
             position: absolute;
         }
         #youtoob-left-zone .youtoob-skip-indicator {
-            right: 50%;
+            left: 0;
             transform: translateX(-50%);
         }
         #youtoob-right-zone .youtoob-skip-indicator {
-            left: 50%;
+            right: 0;
             transform: translateX(50%);
         }
         .youtoob-skip-indicator.show {
