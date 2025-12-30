@@ -122,14 +122,25 @@ function setupGestures(video, overlay) {
         // Must request fullscreen IMMEDIATELY during user gesture - no setTimeout!
         resetTransform(false);
 
-        // Get FRESH DOM references - cached refs can become stale after fullscreen cycles
+        // Try clicking YouTube's native fullscreen button first
+        // This works more reliably than requestFullscreen() after fullscreen cycles
+        const ytFullscreen = document.querySelector('.ytp-fullscreen-button') ||
+            document.querySelector('[aria-label*="ull screen"]') ||
+            document.querySelector('button.fullscreen-icon');
+
+        if (ytFullscreen) {
+            console.log('[YouToob] Clicking YouTube fullscreen button');
+            ytFullscreen.click();
+            return;
+        }
+
+        // Fallback to API if YouTube button not found
         const videoEl = document.querySelector('video');
         if (!videoEl) {
             console.log('[YouToob] No video element found');
             return;
         }
 
-        // Find YouTube's player container fresh from DOM
         const target = videoEl.closest('.html5-video-player')
                     || videoEl.closest('[id*="player"]')
                     || videoEl.parentElement;
