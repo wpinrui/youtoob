@@ -46,7 +46,7 @@ YouToob wraps YouTube's mobile site in Firefox's GeckoView engine, enabling Fire
 - [x] Design custom bottom navigation
 - [ ] Implement gesture controls (swipe for volume/brightness)
 - [ ] Add custom playback controls
-- [ ] Hide unnecessary YouTube UI elements (via CSS injection)
+- [x] Hide unnecessary YouTube UI elements (via CSS injection)
 - [ ] Create settings screen for app customization
 - [ ] Implement custom theming
 
