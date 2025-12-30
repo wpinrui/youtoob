@@ -43,10 +43,7 @@ function setupGestures(video, overlay) {
         }
     }
 
-    // Check if we're in fullscreen
-    function isFullscreen() {
-        return !!(document.fullscreenElement || document.webkitFullscreenElement);
-    }
+    // isFullscreen() is defined in 06-helpers.js
 
     // Calculate distance between two touch points
     function getTouchDistance(touches) {

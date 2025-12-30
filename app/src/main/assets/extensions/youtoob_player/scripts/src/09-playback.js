@@ -86,15 +86,15 @@ function setupFullscreen(overlay, controls) {
 
     function checkFullscreen() {
         const fsElement = document.fullscreenElement || document.webkitFullscreenElement;
-        const isFullscreen = !!fsElement;
+        const inFullscreenMode = !!fsElement;
         const wasFullscreen = overlay.classList.contains('fullscreen');
 
-        if (isFullscreen && !wasFullscreen) {
+        if (inFullscreenMode && !wasFullscreen) {
             // Entering fullscreen - move overlay into fullscreen element
             overlay.classList.add('fullscreen');
             const target = fsElement.tagName === 'VIDEO' ? fsElement.parentElement : fsElement;
             target.appendChild(overlay);
-        } else if (!isFullscreen && wasFullscreen) {
+        } else if (!inFullscreenMode && wasFullscreen) {
             // Exiting fullscreen - move overlay back to player container
             overlay.classList.remove('fullscreen');
             if (window._youtoobPlayerContainer) {

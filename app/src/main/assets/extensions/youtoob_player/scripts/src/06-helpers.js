@@ -60,3 +60,7 @@ function getYouTubeNextButton() {
     return document.querySelector('.ytp-next-button') ||
         document.querySelector('[aria-label*="Next"]');
 }
+
+function isFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
