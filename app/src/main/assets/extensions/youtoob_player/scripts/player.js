@@ -105,10 +105,12 @@
         #youtoob-left-zone .youtoob-skip-indicator {
             left: 0;
             transform: translateX(-50%);
+            padding-left: 55%;
         }
         #youtoob-right-zone .youtoob-skip-indicator {
             right: 0;
             transform: translateX(50%);
+            padding-right: 55%;
         }
         .youtoob-skip-indicator.show {
             opacity: 1;
