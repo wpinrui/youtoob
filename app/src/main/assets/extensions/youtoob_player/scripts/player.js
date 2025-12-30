@@ -476,6 +476,9 @@
     // Fullscreen Setup
     // =============================================================================
 
+    // Store fullscreen handler globally so we can remove it on re-injection
+    let currentFullscreenHandler = null;
+
     function setupFullscreen(overlay, playerContainer, controls) {
         document.getElementById('youtoob-fullscreen').addEventListener('click', (e) => {
             e.stopPropagation();
@@ -497,14 +500,21 @@
             controls.show();
         });
 
-        document.addEventListener('fullscreenchange', () => {
+        // Remove previous fullscreen handler if exists
+        if (currentFullscreenHandler) {
+            document.removeEventListener('fullscreenchange', currentFullscreenHandler);
+        }
+
+        currentFullscreenHandler = () => {
             if (document.fullscreenElement) {
                 document.fullscreenElement.appendChild(overlay);
             } else {
                 playerContainer.appendChild(overlay);
             }
             controls.show();
-        });
+        };
+
+        document.addEventListener('fullscreenchange', currentFullscreenHandler);
     }
 
     // =============================================================================
@@ -534,9 +544,8 @@
 
         ensureRelativePositioning(playerContainer);
 
-        // Remove existing controls if any
-        const existing = document.getElementById('youtoob-controls');
-        if (existing) existing.remove();
+        // Remove ALL existing controls (may be in different containers during fullscreen)
+        document.querySelectorAll('#youtoob-controls').forEach(el => el.remove());
 
         // Create and append overlay
         const overlay = document.createElement('div');
