@@ -187,8 +187,9 @@ function setupGestures(video, overlay) {
             e.target.closest('.youtoob-fullscreen-btn') ||
             e.target.closest('.youtoob-menu')) return;
 
-        // Detect pinch start (2 fingers)
+        // Detect pinch start (2 fingers) - only in fullscreen
         if (e.touches.length === 2) {
+            if (!isFullscreen()) return; // Ignore pinch in portrait
             console.log('[YouToob] Pinch START detected, distance:', getTouchDistance(e.touches));
             isPinching = true;
             initialPinchDistance = getTouchDistance(e.touches);
@@ -210,8 +211,8 @@ function setupGestures(video, overlay) {
     }, { capture: true, passive: false });
 
     document.addEventListener('touchmove', (e) => {
-        // 2 fingers = pinch only, no swipe
-        if (e.touches.length >= 2) {
+        // 2 fingers = pinch only, no swipe (only in fullscreen)
+        if (e.touches.length >= 2 && isFullscreen()) {
             // Start pinch if not already
             if (!isPinching) {
                 console.log('[YouToob] Pinch detected in touchmove, distance:', getTouchDistance(e.touches));
