@@ -1,988 +1,999 @@
 (function () {
     'use strict';
 
-    // =============================================================================
-    // GLOBAL STATE - stored on window to survive script re-injection
-    // =============================================================================
+// =============================================================================
+// GLOBAL STATE - stored on window to survive script re-injection
+// =============================================================================
 
-    // Clean up ANY existing overlay immediately
-    document.querySelectorAll('#youtoob-controls').forEach(el => el.remove());
+// Clean up ANY existing overlay immediately
+document.querySelectorAll('#youtoob-controls').forEach(el => el.remove());
 
-    // Clean up any previous fullscreen handlers
-    if (window._youtoobFsHandler) {
-        document.removeEventListener('fullscreenchange', window._youtoobFsHandler);
-        document.removeEventListener('webkitfullscreenchange', window._youtoobFsHandler);
+// Clean up any previous fullscreen handlers
+if (window._youtoobFsHandler) {
+    document.removeEventListener('fullscreenchange', window._youtoobFsHandler);
+    document.removeEventListener('webkitfullscreenchange', window._youtoobFsHandler);
+}
+if (window._youtoobFsInterval) {
+    clearInterval(window._youtoobFsInterval);
+}
+
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+const DOUBLE_TAP_THRESHOLD_MS = 300;
+const SKIP_INDICATOR_HIDE_MS = 600;
+const CONTROLS_AUTO_HIDE_MS = 3000;
+const SKIP_SECONDS = 10;
+const VIDEO_POLL_INTERVAL_MS = 500;
+
+const QUALITY_LABELS = {
+    'hd2160': '4K (2160p)',
+    'hd1440': '1440p',
+    'hd1080': '1080p (FHD)',
+    'hd720': '720p (HD)',
+    'large': '480p',
+    'medium': '360p',
+    'small': '240p',
+    'tiny': '144p',
+    'auto': 'Auto'
+};
+
+const FALLBACK_QUALITIES = ['hd1080', 'hd720', 'large', 'medium', 'small'];
+
+
+// =============================================================================
+// SVG Icons
+// =============================================================================
+
+const ICONS = {
+    play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>',
+    prev: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>',
+    next: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>',
+    fullscreen: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>',
+    skipBack: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>',
+    skipForward: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>'
+};
+
+
+// =============================================================================
+// CSS Styles
+// =============================================================================
+
+const PLAYER_STYLES = `
+    /* Hide YouTube's native mobile controls */
+    .player-controls-content,
+    .ytp-chrome-bottom,
+    .ytp-chrome-top,
+    .ytp-gradient-bottom,
+    .ytp-gradient-top,
+    .ytp-bezel,
+    .ytp-doubletap-ui,
+    .ytp-doubletap-ui-legacy,
+    ytm-custom-control,
+    .ytm-autonav-bar,
+    .player-controls-background {
+        display: none !important;
+        pointer-events: none !important;
     }
-    if (window._youtoobFsInterval) {
-        clearInterval(window._youtoobFsInterval);
+
+    #youtoob-controls {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        z-index: 99999 !important;
+        pointer-events: none;
+        overflow: visible;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
     }
+    #youtoob-controls.fullscreen {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        z-index: 2147483647 !important;
+    }
+    .youtoob-overlay-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.55);
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        z-index: 1;
+    }
+    #youtoob-controls.show-controls .youtoob-overlay-bg {
+        opacity: 1;
+    }
+    #youtoob-controls.show-controls .youtoob-center-controls {
+        opacity: 1;
+    }
+    #youtoob-controls.show-controls .youtoob-bottom-bar {
+        opacity: 1;
+    }
+    .youtoob-tap-zones {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        pointer-events: auto;
+        z-index: 100000;
+        overflow: visible;
+        touch-action: manipulation;
+    }
+    .youtoob-tap-zone {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: visible;
+        touch-action: manipulation;
+    }
+    .youtoob-skip-indicator {
+        background: rgba(0,0,0,0.3);
+        border-radius: 50%;
+        width: 100vh;
+        height: 100vh;
+        opacity: 0;
+        transition: opacity 0.15s;
+        pointer-events: none;
+        position: absolute;
+    }
+    .youtoob-skip-content {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    #youtoob-left-zone .youtoob-skip-indicator {
+        left: 0;
+        transform: translateX(-50%);
+    }
+    #youtoob-left-zone .youtoob-skip-content {
+        right: 25%;
+    }
+    #youtoob-right-zone .youtoob-skip-indicator {
+        right: 0;
+        transform: translateX(50%);
+    }
+    #youtoob-right-zone .youtoob-skip-content {
+        left: 25%;
+    }
+    .youtoob-skip-indicator.show {
+        opacity: 1;
+    }
+    .youtoob-skip-indicator span {
+        color: white;
+        font-size: 14px;
+        display: block;
+        text-align: center;
+    }
+    .youtoob-skip-icon svg {
+        width: 100%;
+        height: 100%;
+        fill: white;
+    }
+    .youtoob-center-controls {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        gap: 48px;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        z-index: 100001;
+    }
+    #youtoob-controls.show-controls .youtoob-center-controls {
+        pointer-events: auto;
+    }
+    .youtoob-btn {
+        background: rgba(0,0,0,0.35);
+        border: none;
+        border-radius: 50%;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .youtoob-btn svg {
+        width: 60%;
+        height: 60%;
+    }
+    .youtoob-btn-small {
+        width: 48px;
+        height: 48px;
+    }
+    .youtoob-btn-large {
+        width: 64px;
+        height: 64px;
+    }
+    .youtoob-skip-icon {
+        width: 32px;
+        height: 32px;
+        margin-bottom: 4px;
+    }
+    .youtoob-bottom-bar {
+        position: absolute;
+        bottom: 35px;
+        right: 12px;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        z-index: 100001;
+    }
+    #youtoob-controls.fullscreen .youtoob-bottom-bar {
+        bottom: 65px;
+    }
+    #youtoob-controls.show-controls .youtoob-bottom-bar {
+        pointer-events: auto;
+    }
+    .youtoob-pill-btn {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.5);
+        border-radius: 4px;
+        color: white;
+        padding: 0;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        min-width: 40px;
+        height: 28px;
+        line-height: 28px;
+        text-align: center;
+    }
+    .youtoob-pill-btn:active {
+        background: rgba(255,255,255,0.2);
+    }
+    .youtoob-fullscreen-btn {
+        background: transparent;
+        border: none;
+        color: white;
+        padding: 0;
+        cursor: pointer;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .youtoob-fullscreen-btn svg {
+        width: 24px;
+        height: 24px;
+    }
+    .youtoob-fullscreen-btn:active {
+        opacity: 0.7;
+    }
+    .youtoob-menu {
+        position: absolute;
+        bottom: 36px;
+        right: 0;
+        background: #212121;
+        border-radius: 8px;
+        padding: 8px 0;
+        display: none;
+        min-width: 100px;
+    }
+    .youtoob-menu.show {
+        display: block;
+    }
+    .youtoob-menu-option {
+        color: white;
+        padding: 10px 16px;
+        cursor: pointer;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+    .youtoob-menu-option:hover {
+        background: rgba(255,255,255,0.1);
+    }
+    .youtoob-menu-option.active {
+        color: #3ea6ff;
+        font-weight: bold;
+    }
+    /* Seek bar styles */
+    .youtoob-seek-container {
+        position: absolute;
+        bottom: 0;
+        left: 12px;
+        right: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        z-index: 100001;
+    }
+    #youtoob-controls.fullscreen .youtoob-seek-container {
+        bottom: 30px;
+        left: 62px;
+        right: 12px;
+    }
+    #youtoob-controls.show-controls .youtoob-seek-container {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    .youtoob-time-display {
+        color: white;
+        font-size: 12px;
+        font-weight: 500;
+        font-family: Roboto, Arial, sans-serif;
+    }
+    .youtoob-seek-bar {
+        width: 100%;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        position: relative;
+        padding: 0 6px;
+        box-sizing: border-box;
+    }
+    .youtoob-seek-track {
+        position: absolute;
+        left: 6px;
+        right: 6px;
+        height: 3px;
+        background: rgba(255,255,255,0.3);
+        border-radius: 1.5px;
+    }
+    .youtoob-seek-buffer {
+        position: absolute;
+        left: 6px;
+        height: 3px;
+        background: rgba(255,255,255,0.5);
+        border-radius: 1.5px;
+        width: 0%;
+    }
+    .youtoob-seek-progress {
+        position: absolute;
+        left: 6px;
+        height: 3px;
+        background: #ff0000;
+        border-radius: 1.5px;
+        width: 0%;
+    }
+    .youtoob-seek-thumb {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background: #ff0000;
+        border-radius: 50%;
+        transform: translateX(-50%);
+        left: 6px;
+        box-shadow: 0 0 4px rgba(0,0,0,0.3);
+    }
+    .youtoob-seek-bar:active .youtoob-seek-thumb {
+        width: 16px;
+        height: 16px;
+    }
+    .youtoob-seek-bar:active .youtoob-seek-track,
+    .youtoob-seek-bar:active .youtoob-seek-buffer,
+    .youtoob-seek-bar:active .youtoob-seek-progress {
+        height: 5px;
+    }
+`;
 
-    // =============================================================================
-    // Constants
-    // =============================================================================
 
-    const DOUBLE_TAP_THRESHOLD_MS = 300;
-    const SKIP_INDICATOR_HIDE_MS = 600;
-    const CONTROLS_AUTO_HIDE_MS = 3000;
-    const SKIP_SECONDS = 10;
-    const VIDEO_POLL_INTERVAL_MS = 500;
+// =============================================================================
+// HTML Template
+// =============================================================================
 
-    const QUALITY_LABELS = {
-        'hd2160': '4K (2160p)',
-        'hd1440': '1440p',
-        'hd1080': '1080p (FHD)',
-        'hd720': '720p (HD)',
-        'large': '480p',
-        'medium': '360p',
-        'small': '240p',
-        'tiny': '144p',
-        'auto': 'Auto'
-    };
+function getOverlayHTML() {
+    return `
+        <style>${PLAYER_STYLES}</style>
 
-    const FALLBACK_QUALITIES = ['hd1080', 'hd720', 'large', 'medium', 'small'];
+        <div class="youtoob-overlay-bg"></div>
 
-    // =============================================================================
-    // SVG Icons
-    // =============================================================================
+        <div class="youtoob-tap-zones">
+            <div class="youtoob-tap-zone" id="youtoob-left-zone">
+                <div class="youtoob-skip-indicator" id="youtoob-skip-back">
+                    <div class="youtoob-skip-content">
+                        <div class="youtoob-skip-icon">${ICONS.skipBack}</div>
+                        <span id="youtoob-skip-back-text">${SKIP_SECONDS} seconds</span>
+                    </div>
+                </div>
+            </div>
+            <div class="youtoob-tap-zone" id="youtoob-center-zone"></div>
+            <div class="youtoob-tap-zone" id="youtoob-right-zone">
+                <div class="youtoob-skip-indicator" id="youtoob-skip-forward">
+                    <div class="youtoob-skip-content">
+                        <div class="youtoob-skip-icon">${ICONS.skipForward}</div>
+                        <span id="youtoob-skip-forward-text">${SKIP_SECONDS} seconds</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    const ICONS = {
-        play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
-        pause: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>',
-        prev: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>',
-        next: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>',
-        fullscreen: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>',
-        skipBack: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>',
-        skipForward: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>'
-    };
+        <div class="youtoob-center-controls">
+            <button class="youtoob-btn youtoob-btn-small" id="youtoob-prev">${ICONS.prev}</button>
+            <button class="youtoob-btn youtoob-btn-large" id="youtoob-play-pause">${ICONS.play}</button>
+            <button class="youtoob-btn youtoob-btn-small" id="youtoob-next">${ICONS.next}</button>
+        </div>
 
-    // =============================================================================
-    // CSS Styles
-    // =============================================================================
+        <div class="youtoob-seek-container">
+            <span class="youtoob-time-display" id="youtoob-time-display">0:00 / 0:00</span>
+            <div class="youtoob-seek-bar" id="youtoob-seek-bar">
+                <div class="youtoob-seek-track"></div>
+                <div class="youtoob-seek-buffer" id="youtoob-seek-buffer"></div>
+                <div class="youtoob-seek-progress" id="youtoob-seek-progress"></div>
+                <div class="youtoob-seek-thumb" id="youtoob-seek-thumb"></div>
+            </div>
+        </div>
 
-    const PLAYER_STYLES = `
-        /* Hide YouTube's native mobile controls */
-        .player-controls-content,
-        .ytp-chrome-bottom,
-        .ytp-chrome-top,
-        .ytp-gradient-bottom,
-        .ytp-gradient-top,
-        .ytp-bezel,
-        .ytp-doubletap-ui,
-        .ytp-doubletap-ui-legacy,
-        ytm-custom-control,
-        .ytm-autonav-bar,
-        .player-controls-background {
-            display: none !important;
-            pointer-events: none !important;
-        }
-
-        #youtoob-controls {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            z-index: 99999 !important;
-            pointer-events: none;
-            overflow: visible;
-            -webkit-user-select: none;
-            user-select: none;
-            -webkit-touch-callout: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-        #youtoob-controls.fullscreen {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            z-index: 2147483647 !important;
-        }
-        .youtoob-overlay-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.55);
-            opacity: 0;
-            transition: opacity 0.2s;
-            pointer-events: none;
-            z-index: 1;
-        }
-        #youtoob-controls.show-controls .youtoob-overlay-bg {
-            opacity: 1;
-        }
-        #youtoob-controls.show-controls .youtoob-center-controls {
-            opacity: 1;
-        }
-        #youtoob-controls.show-controls .youtoob-bottom-bar {
-            opacity: 1;
-        }
-        .youtoob-tap-zones {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            pointer-events: auto;
-            z-index: 100000;
-            overflow: visible;
-            touch-action: manipulation;
-        }
-        .youtoob-tap-zone {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: visible;
-            touch-action: manipulation;
-        }
-        .youtoob-skip-indicator {
-            background: rgba(0,0,0,0.3);
-            border-radius: 50%;
-            width: 100vh;
-            height: 100vh;
-            opacity: 0;
-            transition: opacity 0.15s;
-            pointer-events: none;
-            position: absolute;
-        }
-        .youtoob-skip-content {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        #youtoob-left-zone .youtoob-skip-indicator {
-            left: 0;
-            transform: translateX(-50%);
-        }
-        #youtoob-left-zone .youtoob-skip-content {
-            right: 25%;
-        }
-        #youtoob-right-zone .youtoob-skip-indicator {
-            right: 0;
-            transform: translateX(50%);
-        }
-        #youtoob-right-zone .youtoob-skip-content {
-            left: 25%;
-        }
-        .youtoob-skip-indicator.show {
-            opacity: 1;
-        }
-        .youtoob-skip-indicator span {
-            color: white;
-            font-size: 14px;
-            display: block;
-            text-align: center;
-        }
-        .youtoob-skip-icon svg {
-            width: 100%;
-            height: 100%;
-            fill: white;
-        }
-        .youtoob-center-controls {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            gap: 48px;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.2s;
-            pointer-events: none;
-            z-index: 100001;
-        }
-        #youtoob-controls.show-controls .youtoob-center-controls {
-            pointer-events: auto;
-        }
-        .youtoob-btn {
-            background: rgba(0,0,0,0.35);
-            border: none;
-            border-radius: 50%;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .youtoob-btn svg {
-            width: 60%;
-            height: 60%;
-        }
-        .youtoob-btn-small {
-            width: 48px;
-            height: 48px;
-        }
-        .youtoob-btn-large {
-            width: 64px;
-            height: 64px;
-        }
-        .youtoob-skip-icon {
-            width: 32px;
-            height: 32px;
-            margin-bottom: 4px;
-        }
-        .youtoob-bottom-bar {
-            position: absolute;
-            bottom: 35px;
-            right: 12px;
-            display: flex;
-            gap: 6px;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.2s;
-            pointer-events: none;
-            z-index: 100001;
-        }
-        #youtoob-controls.fullscreen .youtoob-bottom-bar {
-            bottom: 65px;
-        }
-        #youtoob-controls.show-controls .youtoob-bottom-bar {
-            pointer-events: auto;
-        }
-        .youtoob-pill-btn {
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.5);
-            border-radius: 4px;
-            color: white;
-            padding: 0;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            min-width: 40px;
-            height: 28px;
-            line-height: 28px;
-            text-align: center;
-        }
-        .youtoob-pill-btn:active {
-            background: rgba(255,255,255,0.2);
-        }
-        .youtoob-fullscreen-btn {
-            background: transparent;
-            border: none;
-            color: white;
-            padding: 0;
-            cursor: pointer;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .youtoob-fullscreen-btn svg {
-            width: 24px;
-            height: 24px;
-        }
-        .youtoob-fullscreen-btn:active {
-            opacity: 0.7;
-        }
-        .youtoob-menu {
-            position: absolute;
-            bottom: 36px;
-            right: 0;
-            background: #212121;
-            border-radius: 8px;
-            padding: 8px 0;
-            display: none;
-            min-width: 100px;
-        }
-        .youtoob-menu.show {
-            display: block;
-        }
-        .youtoob-menu-option {
-            color: white;
-            padding: 10px 16px;
-            cursor: pointer;
-            font-size: 13px;
-            white-space: nowrap;
-        }
-        .youtoob-menu-option:hover {
-            background: rgba(255,255,255,0.1);
-        }
-        .youtoob-menu-option.active {
-            color: #3ea6ff;
-            font-weight: bold;
-        }
-        /* Seek bar styles */
-        .youtoob-seek-container {
-            position: absolute;
-            bottom: 0;
-            left: 12px;
-            right: 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 6px;
-            opacity: 0;
-            transition: opacity 0.2s;
-            pointer-events: none;
-            z-index: 100001;
-        }
-        #youtoob-controls.fullscreen .youtoob-seek-container {
-            bottom: 30px;
-            left: 62px;
-            right: 12px;
-        }
-        #youtoob-controls.show-controls .youtoob-seek-container {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .youtoob-time-display {
-            color: white;
-            font-size: 12px;
-            font-weight: 500;
-            font-family: Roboto, Arial, sans-serif;
-        }
-        .youtoob-seek-bar {
-            width: 100%;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            position: relative;
-            padding: 0 6px;
-            box-sizing: border-box;
-        }
-        .youtoob-seek-track {
-            position: absolute;
-            left: 6px;
-            right: 6px;
-            height: 3px;
-            background: rgba(255,255,255,0.3);
-            border-radius: 1.5px;
-        }
-        .youtoob-seek-buffer {
-            position: absolute;
-            left: 6px;
-            height: 3px;
-            background: rgba(255,255,255,0.5);
-            border-radius: 1.5px;
-            width: 0%;
-        }
-        .youtoob-seek-progress {
-            position: absolute;
-            left: 6px;
-            height: 3px;
-            background: #ff0000;
-            border-radius: 1.5px;
-            width: 0%;
-        }
-        .youtoob-seek-thumb {
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            background: #ff0000;
-            border-radius: 50%;
-            transform: translateX(-50%);
-            left: 6px;
-            box-shadow: 0 0 4px rgba(0,0,0,0.3);
-        }
-        .youtoob-seek-bar:active .youtoob-seek-thumb {
-            width: 16px;
-            height: 16px;
-        }
-        .youtoob-seek-bar:active .youtoob-seek-track,
-        .youtoob-seek-bar:active .youtoob-seek-buffer,
-        .youtoob-seek-bar:active .youtoob-seek-progress {
-            height: 5px;
-        }
+        <div class="youtoob-bottom-bar">
+            <div style="position: relative;">
+                <button class="youtoob-pill-btn" id="youtoob-quality">FHD</button>
+                <div class="youtoob-menu" id="youtoob-quality-menu"></div>
+            </div>
+            <div style="position: relative;">
+                <button class="youtoob-pill-btn" id="youtoob-speed">1.0</button>
+                <div class="youtoob-menu" id="youtoob-speed-menu">
+                    <div class="youtoob-menu-option" data-speed="0.5">0.5x</div>
+                    <div class="youtoob-menu-option" data-speed="0.75">0.75x</div>
+                    <div class="youtoob-menu-option active" data-speed="1">1.0x</div>
+                    <div class="youtoob-menu-option" data-speed="1.25">1.25x</div>
+                    <div class="youtoob-menu-option" data-speed="1.5">1.5x</div>
+                    <div class="youtoob-menu-option" data-speed="1.75">1.75x</div>
+                    <div class="youtoob-menu-option" data-speed="2">2.0x</div>
+                </div>
+            </div>
+            <button class="youtoob-fullscreen-btn" id="youtoob-fullscreen">${ICONS.fullscreen}</button>
+        </div>
     `;
+}
 
-    // =============================================================================
-    // HTML Template
-    // =============================================================================
 
-    function getOverlayHTML() {
-        return `
-            <style>${PLAYER_STYLES}</style>
+// =============================================================================
+// Helper Functions
+// =============================================================================
 
-            <div class="youtoob-overlay-bg"></div>
+function waitForVideo(callback) {
+    const video = document.querySelector('video');
+    if (video) {
+        callback(video);
+    } else {
+        setTimeout(() => waitForVideo(callback), VIDEO_POLL_INTERVAL_MS);
+    }
+}
 
-            <div class="youtoob-tap-zones">
-                <div class="youtoob-tap-zone" id="youtoob-left-zone">
-                    <div class="youtoob-skip-indicator" id="youtoob-skip-back">
-                        <div class="youtoob-skip-content">
-                            <div class="youtoob-skip-icon">${ICONS.skipBack}</div>
-                            <span id="youtoob-skip-back-text">${SKIP_SECONDS} seconds</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="youtoob-tap-zone" id="youtoob-center-zone"></div>
-                <div class="youtoob-tap-zone" id="youtoob-right-zone">
-                    <div class="youtoob-skip-indicator" id="youtoob-skip-forward">
-                        <div class="youtoob-skip-content">
-                            <div class="youtoob-skip-icon">${ICONS.skipForward}</div>
-                            <span id="youtoob-skip-forward-text">${SKIP_SECONDS} seconds</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+function getQualityLabel(height) {
+    if (height >= 2160) return '4K';
+    if (height >= 1440) return '1440p';
+    if (height >= 1080) return 'FHD';
+    if (height >= 720) return 'HD';
+    if (height >= 480) return '480p';
+    if (height >= 360) return '360p';
+    return 'Auto';
+}
 
-            <div class="youtoob-center-controls">
-                <button class="youtoob-btn youtoob-btn-small" id="youtoob-prev">${ICONS.prev}</button>
-                <button class="youtoob-btn youtoob-btn-large" id="youtoob-play-pause">${ICONS.play}</button>
-                <button class="youtoob-btn youtoob-btn-small" id="youtoob-next">${ICONS.next}</button>
-            </div>
+function findPlayerContainer(video) {
+    return document.querySelector('ytm-player') ||
+        document.querySelector('.html5-video-player') ||
+        video.parentElement;
+}
 
-            <div class="youtoob-seek-container">
-                <span class="youtoob-time-display" id="youtoob-time-display">0:00 / 0:00</span>
-                <div class="youtoob-seek-bar" id="youtoob-seek-bar">
-                    <div class="youtoob-seek-track"></div>
-                    <div class="youtoob-seek-buffer" id="youtoob-seek-buffer"></div>
-                    <div class="youtoob-seek-progress" id="youtoob-seek-progress"></div>
-                    <div class="youtoob-seek-thumb" id="youtoob-seek-thumb"></div>
-                </div>
-            </div>
+function ensureRelativePositioning(container) {
+    const style = getComputedStyle(container);
+    if (style.position === 'static') {
+        container.style.position = 'relative';
+    }
+}
 
-            <div class="youtoob-bottom-bar">
-                <div style="position: relative;">
-                    <button class="youtoob-pill-btn" id="youtoob-quality">FHD</button>
-                    <div class="youtoob-menu" id="youtoob-quality-menu"></div>
-                </div>
-                <div style="position: relative;">
-                    <button class="youtoob-pill-btn" id="youtoob-speed">1.0</button>
-                    <div class="youtoob-menu" id="youtoob-speed-menu">
-                        <div class="youtoob-menu-option" data-speed="0.5">0.5x</div>
-                        <div class="youtoob-menu-option" data-speed="0.75">0.75x</div>
-                        <div class="youtoob-menu-option active" data-speed="1">1.0x</div>
-                        <div class="youtoob-menu-option" data-speed="1.25">1.25x</div>
-                        <div class="youtoob-menu-option" data-speed="1.5">1.5x</div>
-                        <div class="youtoob-menu-option" data-speed="1.75">1.75x</div>
-                        <div class="youtoob-menu-option" data-speed="2">2.0x</div>
-                    </div>
-                </div>
-                <button class="youtoob-fullscreen-btn" id="youtoob-fullscreen">${ICONS.fullscreen}</button>
-            </div>
-        `;
+function formatTime(seconds) {
+    if (!isFinite(seconds) || seconds < 0) return '0:00';
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    if (hrs > 0) {
+        return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+
+// =============================================================================
+// Controls Visibility Management
+// =============================================================================
+
+function createControlsManager(overlay, speedMenu, qualityMenu, video) {
+    let visible = false;
+    let hideTimeout = null;
+
+    function scheduleHide() {
+        clearTimeout(hideTimeout);
+        // Don't auto-hide if video is paused
+        if (!video.paused) {
+            hideTimeout = setTimeout(hide, CONTROLS_AUTO_HIDE_MS);
+        }
     }
 
-    // =============================================================================
-    // Helper Functions
-    // =============================================================================
+    function show() {
+        visible = true;
+        overlay.classList.add('show-controls');
+        scheduleHide();
+    }
 
-    function waitForVideo(callback) {
-        const video = document.querySelector('video');
-        if (video) {
-            callback(video);
+    function hide() {
+        visible = false;
+        overlay.classList.remove('show-controls');
+        speedMenu.classList.remove('show');
+        qualityMenu.classList.remove('show');
+    }
+
+    function toggle() {
+        if (visible) {
+            hide();
         } else {
-            setTimeout(() => waitForVideo(callback), VIDEO_POLL_INTERVAL_MS);
+            show();
         }
     }
 
-    function getQualityLabel(height) {
-        if (height >= 2160) return '4K';
-        if (height >= 1440) return '1440p';
-        if (height >= 1080) return 'FHD';
-        if (height >= 720) return 'HD';
-        if (height >= 480) return '480p';
-        if (height >= 360) return '360p';
-        return 'Auto';
-    }
+    // When video plays, schedule hide if controls are visible
+    video.addEventListener('play', () => {
+        if (visible) scheduleHide();
+    });
 
-    function findPlayerContainer(video) {
-        return document.querySelector('ytm-player') ||
-            document.querySelector('.html5-video-player') ||
-            video.parentElement;
-    }
+    return { show, hide, toggle };
+}
 
-    function ensureRelativePositioning(container) {
-        const style = getComputedStyle(container);
-        if (style.position === 'static') {
-            container.style.position = 'relative';
-        }
-    }
+// =============================================================================
+// Double-Tap Skip Handler
+// =============================================================================
 
-    function formatTime(seconds) {
-        if (!isFinite(seconds) || seconds < 0) return '0:00';
-        const hrs = Math.floor(seconds / 3600);
-        const mins = Math.floor((seconds % 3600) / 60);
-        const secs = Math.floor(seconds % 60);
-        if (hrs > 0) {
-            return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    }
+function createDoubleTapHandler(video, indicator, textElement, direction, controls) {
+    let lastTap = 0;
+    let accumSeconds = 0;
 
-    // =============================================================================
-    // Controls Visibility Management
-    // =============================================================================
+    return function handleTap(e) {
+        e.stopPropagation();
+        const now = Date.now();
 
-    function createControlsManager(overlay, speedMenu, qualityMenu, video) {
-        let visible = false;
-        let hideTimeout = null;
-
-        function scheduleHide() {
-            clearTimeout(hideTimeout);
-            // Don't auto-hide if video is paused
-            if (!video.paused) {
-                hideTimeout = setTimeout(hide, CONTROLS_AUTO_HIDE_MS);
+        if (now - lastTap < DOUBLE_TAP_THRESHOLD_MS) {
+            // Double tap - skip and hide controls
+            controls.hide();
+            accumSeconds += SKIP_SECONDS;
+            if (direction === 'back') {
+                video.currentTime = Math.max(0, video.currentTime - SKIP_SECONDS);
+            } else {
+                video.currentTime = Math.min(video.duration, video.currentTime + SKIP_SECONDS);
             }
+            textElement.textContent = accumSeconds + ' seconds';
+            indicator.classList.add('show');
+            clearTimeout(indicator.hideTimeout);
+            indicator.hideTimeout = setTimeout(() => {
+                indicator.classList.remove('show');
+                accumSeconds = 0;
+            }, SKIP_INDICATOR_HIDE_MS);
+        } else {
+            // Single tap - toggle controls
+            controls.toggle();
         }
+        lastTap = now;
+    };
+}
 
-        function show() {
-            visible = true;
-            overlay.classList.add('show-controls');
-            scheduleHide();
-        }
 
-        function hide() {
-            visible = false;
-            overlay.classList.remove('show-controls');
-            speedMenu.classList.remove('show');
+// =============================================================================
+// Quality Menu Setup
+// =============================================================================
+
+function setupQualityMenu(qualityMenu, controls) {
+    const ytPlayer = document.querySelector('.html5-video-player');
+    let qualities = [];
+
+    if (ytPlayer && ytPlayer.getAvailableQualityLevels) {
+        qualities = ytPlayer.getAvailableQualityLevels();
+    }
+
+    if (!qualities || qualities.length === 0) {
+        qualities = FALLBACK_QUALITIES;
+    }
+
+    qualityMenu.innerHTML = '';
+    qualities.forEach(quality => {
+        const label = QUALITY_LABELS[quality] || quality;
+        const div = document.createElement('div');
+        div.className = 'youtoob-menu-option';
+        div.dataset.quality = quality;
+        div.textContent = label;
+        qualityMenu.appendChild(div);
+    });
+
+    qualityMenu.querySelectorAll('.youtoob-menu-option').forEach(option => {
+        option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const quality = option.dataset.quality;
+
+            const ytPlayer = document.querySelector('.html5-video-player');
+            if (ytPlayer && ytPlayer.setPlaybackQualityRange) {
+                ytPlayer.setPlaybackQualityRange(quality, quality);
+            } else if (ytPlayer && ytPlayer.setPlaybackQuality) {
+                ytPlayer.setPlaybackQuality(quality);
+            }
+
+            qualityMenu.querySelectorAll('.youtoob-menu-option').forEach(opt => opt.classList.remove('active'));
+            option.classList.add('active');
             qualityMenu.classList.remove('show');
-        }
-
-        function toggle() {
-            if (visible) {
-                hide();
-            } else {
-                show();
-            }
-        }
-
-        // When video plays, schedule hide if controls are visible
-        video.addEventListener('play', () => {
-            if (visible) scheduleHide();
+            controls.show();
         });
+    });
+}
 
-        return { show, hide, toggle };
+// =============================================================================
+// Speed Menu Setup
+// =============================================================================
+
+function setupSpeedMenu(video, speedBtn, speedMenu, controls) {
+    document.querySelectorAll('#youtoob-speed-menu .youtoob-menu-option').forEach(option => {
+        option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const speed = parseFloat(option.dataset.speed);
+            video.playbackRate = speed;
+            speedBtn.textContent = speed === 1 ? '1.0' : speed.toString();
+            document.querySelectorAll('#youtoob-speed-menu .youtoob-menu-option').forEach(opt => opt.classList.remove('active'));
+            option.classList.add('active');
+            speedMenu.classList.remove('show');
+            controls.show();
+        });
+    });
+
+    video.addEventListener('ratechange', () => {
+        const rate = video.playbackRate;
+        speedBtn.textContent = rate === 1 ? '1.0' : rate.toString();
+    });
+}
+
+
+// =============================================================================
+// Playback Controls Setup
+// =============================================================================
+
+function setupPlaybackControls(video, playPauseBtn, controls) {
+    function updatePlayPause() {
+        playPauseBtn.innerHTML = video.paused ? ICONS.play : ICONS.pause;
     }
 
-    // =============================================================================
-    // Double-Tap Skip Handler
-    // =============================================================================
+    video.addEventListener('play', updatePlayPause);
+    video.addEventListener('pause', updatePlayPause);
+    updatePlayPause();
 
-    function createDoubleTapHandler(video, indicator, textElement, direction, controls) {
-        let lastTap = 0;
-        let accumSeconds = 0;
+    playPauseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (video.paused) {
+            video.play();
+        } else {
+            video.pause();
+        }
+        controls.show();
+    });
 
-        return function handleTap(e) {
-            e.stopPropagation();
-            const now = Date.now();
+    document.getElementById('youtoob-prev').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const prevBtn = document.querySelector('.ytp-prev-button') ||
+            document.querySelector('[aria-label*="Previous"]');
+        if (prevBtn) prevBtn.click();
+        controls.show();
+    });
 
-            if (now - lastTap < DOUBLE_TAP_THRESHOLD_MS) {
-                // Double tap - skip and hide controls
-                controls.hide();
-                accumSeconds += SKIP_SECONDS;
-                if (direction === 'back') {
-                    video.currentTime = Math.max(0, video.currentTime - SKIP_SECONDS);
+    document.getElementById('youtoob-next').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const nextBtn = document.querySelector('.ytp-next-button') ||
+            document.querySelector('[aria-label*="Next"]');
+        if (nextBtn) nextBtn.click();
+        controls.show();
+    });
+}
+
+// =============================================================================
+// Fullscreen Setup
+// =============================================================================
+
+function setupFullscreen(overlay, controls) {
+    document.getElementById('youtoob-fullscreen').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const ytFullscreen = document.querySelector('.ytp-fullscreen-button') ||
+            document.querySelector('[aria-label*="ull screen"]') ||
+            document.querySelector('button.fullscreen-icon');
+        if (ytFullscreen) {
+            ytFullscreen.click();
+        } else {
+            const videoEl = document.querySelector('video');
+            if (videoEl) {
+                const fsElement = document.fullscreenElement || document.webkitFullscreenElement;
+                if (fsElement) {
+                    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
                 } else {
-                    video.currentTime = Math.min(video.duration, video.currentTime + SKIP_SECONDS);
-                }
-                textElement.textContent = accumSeconds + ' seconds';
-                indicator.classList.add('show');
-                clearTimeout(indicator.hideTimeout);
-                indicator.hideTimeout = setTimeout(() => {
-                    indicator.classList.remove('show');
-                    accumSeconds = 0;
-                }, SKIP_INDICATOR_HIDE_MS);
-            } else {
-                // Single tap - toggle controls
-                controls.toggle();
-            }
-            lastTap = now;
-        };
-    }
-
-    // =============================================================================
-    // Quality Menu Setup
-    // =============================================================================
-
-    function setupQualityMenu(qualityMenu, controls) {
-        const ytPlayer = document.querySelector('.html5-video-player');
-        let qualities = [];
-
-        if (ytPlayer && ytPlayer.getAvailableQualityLevels) {
-            qualities = ytPlayer.getAvailableQualityLevels();
-        }
-
-        if (!qualities || qualities.length === 0) {
-            qualities = FALLBACK_QUALITIES;
-        }
-
-        qualityMenu.innerHTML = '';
-        qualities.forEach(quality => {
-            const label = QUALITY_LABELS[quality] || quality;
-            const div = document.createElement('div');
-            div.className = 'youtoob-menu-option';
-            div.dataset.quality = quality;
-            div.textContent = label;
-            qualityMenu.appendChild(div);
-        });
-
-        qualityMenu.querySelectorAll('.youtoob-menu-option').forEach(option => {
-            option.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const quality = option.dataset.quality;
-
-                const ytPlayer = document.querySelector('.html5-video-player');
-                if (ytPlayer && ytPlayer.setPlaybackQualityRange) {
-                    ytPlayer.setPlaybackQualityRange(quality, quality);
-                } else if (ytPlayer && ytPlayer.setPlaybackQuality) {
-                    ytPlayer.setPlaybackQuality(quality);
-                }
-
-                qualityMenu.querySelectorAll('.youtoob-menu-option').forEach(opt => opt.classList.remove('active'));
-                option.classList.add('active');
-                qualityMenu.classList.remove('show');
-                controls.show();
-            });
-        });
-    }
-
-    // =============================================================================
-    // Speed Menu Setup
-    // =============================================================================
-
-    function setupSpeedMenu(video, speedBtn, speedMenu, controls) {
-        document.querySelectorAll('#youtoob-speed-menu .youtoob-menu-option').forEach(option => {
-            option.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const speed = parseFloat(option.dataset.speed);
-                video.playbackRate = speed;
-                speedBtn.textContent = speed === 1 ? '1.0' : speed.toString();
-                document.querySelectorAll('#youtoob-speed-menu .youtoob-menu-option').forEach(opt => opt.classList.remove('active'));
-                option.classList.add('active');
-                speedMenu.classList.remove('show');
-                controls.show();
-            });
-        });
-
-        video.addEventListener('ratechange', () => {
-            const rate = video.playbackRate;
-            speedBtn.textContent = rate === 1 ? '1.0' : rate.toString();
-        });
-    }
-
-    // =============================================================================
-    // Playback Controls Setup
-    // =============================================================================
-
-    function setupPlaybackControls(video, playPauseBtn, controls) {
-        function updatePlayPause() {
-            playPauseBtn.innerHTML = video.paused ? ICONS.play : ICONS.pause;
-        }
-
-        video.addEventListener('play', updatePlayPause);
-        video.addEventListener('pause', updatePlayPause);
-        updatePlayPause();
-
-        playPauseBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (video.paused) {
-                video.play();
-            } else {
-                video.pause();
-            }
-            controls.show();
-        });
-
-        document.getElementById('youtoob-prev').addEventListener('click', (e) => {
-            e.stopPropagation();
-            const prevBtn = document.querySelector('.ytp-prev-button') ||
-                document.querySelector('[aria-label*="Previous"]');
-            if (prevBtn) prevBtn.click();
-            controls.show();
-        });
-
-        document.getElementById('youtoob-next').addEventListener('click', (e) => {
-            e.stopPropagation();
-            const nextBtn = document.querySelector('.ytp-next-button') ||
-                document.querySelector('[aria-label*="Next"]');
-            if (nextBtn) nextBtn.click();
-            controls.show();
-        });
-    }
-
-    // =============================================================================
-    // Fullscreen Setup
-    // =============================================================================
-
-    function setupFullscreen(overlay, controls) {
-        document.getElementById('youtoob-fullscreen').addEventListener('click', (e) => {
-            e.stopPropagation();
-            const ytFullscreen = document.querySelector('.ytp-fullscreen-button') ||
-                document.querySelector('[aria-label*="ull screen"]') ||
-                document.querySelector('button.fullscreen-icon');
-            if (ytFullscreen) {
-                ytFullscreen.click();
-            } else {
-                const videoEl = document.querySelector('video');
-                if (videoEl) {
-                    const fsElement = document.fullscreenElement || document.webkitFullscreenElement;
-                    if (fsElement) {
-                        (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-                    } else {
-                        (videoEl.requestFullscreen || videoEl.webkitRequestFullscreen).call(videoEl);
-                    }
-                }
-            }
-            controls.show();
-        });
-
-        function checkFullscreen() {
-            const fsElement = document.fullscreenElement || document.webkitFullscreenElement;
-            const isFullscreen = !!fsElement;
-            const wasFullscreen = overlay.classList.contains('fullscreen');
-
-            if (isFullscreen && !wasFullscreen) {
-                // Entering fullscreen - move overlay into fullscreen element
-                overlay.classList.add('fullscreen');
-                const target = fsElement.tagName === 'VIDEO' ? fsElement.parentElement : fsElement;
-                target.appendChild(overlay);
-            } else if (!isFullscreen && wasFullscreen) {
-                // Exiting fullscreen - move overlay back to player container
-                overlay.classList.remove('fullscreen');
-                if (window._youtoobPlayerContainer) {
-                    window._youtoobPlayerContainer.appendChild(overlay);
+                    (videoEl.requestFullscreen || videoEl.webkitRequestFullscreen).call(videoEl);
                 }
             }
         }
+        controls.show();
+    });
 
-        // Store handler globally for cleanup on re-injection
-        window._youtoobFsHandler = () => {
-            checkFullscreen();
-            controls.show();
-        };
+    function checkFullscreen() {
+        const fsElement = document.fullscreenElement || document.webkitFullscreenElement;
+        const isFullscreen = !!fsElement;
+        const wasFullscreen = overlay.classList.contains('fullscreen');
 
-        document.addEventListener('fullscreenchange', window._youtoobFsHandler);
-        document.addEventListener('webkitfullscreenchange', window._youtoobFsHandler);
-
-        // Poll for fullscreen (YouTube sometimes doesn't trigger events)
-        window._youtoobFsInterval = setInterval(checkFullscreen, 500);
+        if (isFullscreen && !wasFullscreen) {
+            // Entering fullscreen - move overlay into fullscreen element
+            overlay.classList.add('fullscreen');
+            const target = fsElement.tagName === 'VIDEO' ? fsElement.parentElement : fsElement;
+            target.appendChild(overlay);
+        } else if (!isFullscreen && wasFullscreen) {
+            // Exiting fullscreen - move overlay back to player container
+            overlay.classList.remove('fullscreen');
+            if (window._youtoobPlayerContainer) {
+                window._youtoobPlayerContainer.appendChild(overlay);
+            }
+        }
     }
 
-    // =============================================================================
-    // Quality Display
-    // =============================================================================
+    // Store handler globally for cleanup on re-injection
+    window._youtoobFsHandler = () => {
+        checkFullscreen();
+        controls.show();
+    };
 
-    function setupQualityDisplay(video, qualityBtn) {
-        function updateQualityDisplay() {
-            qualityBtn.textContent = getQualityLabel(video.videoHeight);
-        }
+    document.addEventListener('fullscreenchange', window._youtoobFsHandler);
+    document.addEventListener('webkitfullscreenchange', window._youtoobFsHandler);
 
-        video.addEventListener('loadedmetadata', updateQualityDisplay);
-        video.addEventListener('resize', updateQualityDisplay);
-        updateQualityDisplay();
+    // Poll for fullscreen (YouTube sometimes doesn't trigger events)
+    window._youtoobFsInterval = setInterval(checkFullscreen, 500);
+}
+
+// =============================================================================
+// Quality Display
+// =============================================================================
+
+function setupQualityDisplay(video, qualityBtn) {
+    function updateQualityDisplay() {
+        qualityBtn.textContent = getQualityLabel(video.videoHeight);
     }
 
-    // =============================================================================
-    // Seek Bar Setup
-    // =============================================================================
+    video.addEventListener('loadedmetadata', updateQualityDisplay);
+    video.addEventListener('resize', updateQualityDisplay);
+    updateQualityDisplay();
+}
 
-    function setupSeekBar(video, controls) {
-        const seekBar = document.getElementById('youtoob-seek-bar');
-        const seekProgress = document.getElementById('youtoob-seek-progress');
-        const seekBuffer = document.getElementById('youtoob-seek-buffer');
-        const seekThumb = document.getElementById('youtoob-seek-thumb');
-        const timeDisplay = document.getElementById('youtoob-time-display');
 
-        let isSeeking = false;
+// =============================================================================
+// Seek Bar Setup
+// =============================================================================
 
-        function updateTimeDisplay() {
-            const current = formatTime(video.currentTime);
-            const duration = formatTime(video.duration);
-            timeDisplay.textContent = `${current} / ${duration}`;
-        }
+function setupSeekBar(video, controls) {
+    const seekBar = document.getElementById('youtoob-seek-bar');
+    const seekProgress = document.getElementById('youtoob-seek-progress');
+    const seekBuffer = document.getElementById('youtoob-seek-buffer');
+    const seekThumb = document.getElementById('youtoob-seek-thumb');
+    const timeDisplay = document.getElementById('youtoob-time-display');
 
-        function updateProgress() {
-            if (isSeeking) return;
-            const percent = (video.currentTime / video.duration) * 100 || 0;
-            const trackWidth = seekBar.offsetWidth - 12; // account for 6px padding each side
-            const progressWidth = (percent / 100) * trackWidth;
-            seekProgress.style.width = progressWidth + 'px';
-            seekThumb.style.left = (6 + progressWidth) + 'px';
-            updateTimeDisplay();
-        }
+    let isSeeking = false;
 
-        function updateBuffer() {
-            if (video.buffered.length > 0) {
-                const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-                const percent = (bufferedEnd / video.duration) || 0;
-                const trackWidth = seekBar.offsetWidth - 12;
-                seekBuffer.style.width = (percent * trackWidth) + 'px';
-            }
-        }
+    function updateTimeDisplay() {
+        const current = formatTime(video.currentTime);
+        const duration = formatTime(video.duration);
+        timeDisplay.textContent = `${current} / ${duration}`;
+    }
 
-        function seekToPosition(clientX) {
-            const rect = seekBar.getBoundingClientRect();
-            const trackWidth = rect.width - 12; // account for padding
-            const relativeX = clientX - rect.left - 6; // offset by left padding
-            const percent = Math.max(0, Math.min(1, relativeX / trackWidth));
-            const time = percent * video.duration;
-            video.currentTime = time;
-            const progressWidth = percent * trackWidth;
-            seekProgress.style.width = progressWidth + 'px';
-            seekThumb.style.left = (6 + progressWidth) + 'px';
-            updateTimeDisplay();
-        }
-
-        // Touch events for seeking
-        seekBar.addEventListener('touchstart', (e) => {
-            e.stopPropagation();
-            isSeeking = true;
-            seekToPosition(e.touches[0].clientX);
-            controls.show();
-        });
-
-        seekBar.addEventListener('touchmove', (e) => {
-            if (isSeeking) {
-                e.preventDefault();
-                seekToPosition(e.touches[0].clientX);
-            }
-        });
-
-        seekBar.addEventListener('touchend', () => {
-            isSeeking = false;
-        });
-
-        // Mouse events (for testing on desktop)
-        seekBar.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-            isSeeking = true;
-            seekToPosition(e.clientX);
-            controls.show();
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (isSeeking) {
-                seekToPosition(e.clientX);
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            isSeeking = false;
-        });
-
-        // Click to seek
-        seekBar.addEventListener('click', (e) => {
-            e.stopPropagation();
-            seekToPosition(e.clientX);
-            controls.show();
-        });
-
-        // Video event listeners
-        video.addEventListener('timeupdate', updateProgress);
-        video.addEventListener('progress', updateBuffer);
-        video.addEventListener('loadedmetadata', updateTimeDisplay);
-        video.addEventListener('durationchange', updateTimeDisplay);
-
-        // Initial update
-        updateProgress();
-        updateBuffer();
+    function updateProgress() {
+        if (isSeeking) return;
+        const percent = (video.currentTime / video.duration) * 100 || 0;
+        const trackWidth = seekBar.offsetWidth - 12; // account for 6px padding each side
+        const progressWidth = (percent / 100) * trackWidth;
+        seekProgress.style.width = progressWidth + 'px';
+        seekThumb.style.left = (6 + progressWidth) + 'px';
         updateTimeDisplay();
     }
 
-    // =============================================================================
-    // Main Setup Function
-    // =============================================================================
-
-    function createCustomControls(video) {
-        const playerContainer = findPlayerContainer(video);
-        if (!playerContainer) {
-            console.log('[YouToob] No player container found');
-            return;
+    function updateBuffer() {
+        if (video.buffered.length > 0) {
+            const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+            const percent = (bufferedEnd / video.duration) || 0;
+            const trackWidth = seekBar.offsetWidth - 12;
+            seekBuffer.style.width = (percent * trackWidth) + 'px';
         }
-
-        ensureRelativePositioning(playerContainer);
-
-        // Create and append overlay (cleanup already done at script start)
-        const overlay = document.createElement('div');
-        overlay.id = 'youtoob-controls';
-        overlay.innerHTML = getOverlayHTML();
-        playerContainer.appendChild(overlay);
-
-        // Store reference globally for cleanup on re-injection
-        window._youtoobOverlay = overlay;
-        window._youtoobPlayerContainer = playerContainer;
-
-        // Get element references
-        const elements = {
-            playPauseBtn: document.getElementById('youtoob-play-pause'),
-            speedBtn: document.getElementById('youtoob-speed'),
-            speedMenu: document.getElementById('youtoob-speed-menu'),
-            qualityBtn: document.getElementById('youtoob-quality'),
-            qualityMenu: document.getElementById('youtoob-quality-menu'),
-            skipBackIndicator: document.getElementById('youtoob-skip-back'),
-            skipForwardIndicator: document.getElementById('youtoob-skip-forward'),
-            skipBackText: document.getElementById('youtoob-skip-back-text'),
-            skipForwardText: document.getElementById('youtoob-skip-forward-text'),
-            leftZone: document.getElementById('youtoob-left-zone'),
-            centerZone: document.getElementById('youtoob-center-zone'),
-            rightZone: document.getElementById('youtoob-right-zone')
-        };
-
-        // Create controls manager
-        const controls = createControlsManager(overlay, elements.speedMenu, elements.qualityMenu, video);
-
-        // Setup tap zones
-        const handleLeftTap = createDoubleTapHandler(
-            video, elements.skipBackIndicator, elements.skipBackText, 'back', controls
-        );
-        const handleRightTap = createDoubleTapHandler(
-            video, elements.skipForwardIndicator, elements.skipForwardText, 'forward', controls
-        );
-
-        // Touch handlers (touchstart for immediate response)
-        elements.leftZone.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            handleLeftTap(e);
-        }, { passive: false });
-        elements.rightZone.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            handleRightTap(e);
-        }, { passive: false });
-        elements.centerZone.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            controls.toggle();
-        }, { passive: false });
-        // Click handlers for desktop
-        elements.leftZone.addEventListener('click', handleLeftTap);
-        elements.rightZone.addEventListener('click', handleRightTap);
-        elements.centerZone.addEventListener('click', (e) => {
-            e.stopPropagation();
-            controls.toggle();
-        });
-
-        // Setup all controls
-        setupPlaybackControls(video, elements.playPauseBtn, controls);
-        setupQualityDisplay(video, elements.qualityBtn);
-        setupQualityMenu(elements.qualityMenu, controls);
-        setupSpeedMenu(video, elements.speedBtn, elements.speedMenu, controls);
-        setupFullscreen(overlay, controls);
-        setupSeekBar(video, controls);
-
-        // Menu toggle buttons
-        elements.speedBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            elements.qualityMenu.classList.remove('show');
-            elements.speedMenu.classList.toggle('show');
-            controls.show();
-        });
-
-        elements.qualityBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            elements.speedMenu.classList.remove('show');
-            elements.qualityMenu.classList.toggle('show');
-            controls.show();
-        });
-
-        // Show controls initially
-        controls.show();
     }
 
-    // =============================================================================
-    // Initialize
-    // =============================================================================
+    function seekToPosition(clientX) {
+        const rect = seekBar.getBoundingClientRect();
+        const trackWidth = rect.width - 12; // account for padding
+        const relativeX = clientX - rect.left - 6; // offset by left padding
+        const percent = Math.max(0, Math.min(1, relativeX / trackWidth));
+        const time = percent * video.duration;
+        video.currentTime = time;
+        const progressWidth = percent * trackWidth;
+        seekProgress.style.width = progressWidth + 'px';
+        seekThumb.style.left = (6 + progressWidth) + 'px';
+        updateTimeDisplay();
+    }
 
-    // Just create controls - content_script.js handles SPA navigation re-injection
-    waitForVideo(createCustomControls);
+    // Touch events for seeking
+    seekBar.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        isSeeking = true;
+        seekToPosition(e.touches[0].clientX);
+        controls.show();
+    });
+
+    seekBar.addEventListener('touchmove', (e) => {
+        if (isSeeking) {
+            e.preventDefault();
+            seekToPosition(e.touches[0].clientX);
+        }
+    });
+
+    seekBar.addEventListener('touchend', () => {
+        isSeeking = false;
+    });
+
+    // Mouse events (for testing on desktop)
+    seekBar.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        isSeeking = true;
+        seekToPosition(e.clientX);
+        controls.show();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (isSeeking) {
+            seekToPosition(e.clientX);
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        isSeeking = false;
+    });
+
+    // Click to seek
+    seekBar.addEventListener('click', (e) => {
+        e.stopPropagation();
+        seekToPosition(e.clientX);
+        controls.show();
+    });
+
+    // Video event listeners
+    video.addEventListener('timeupdate', updateProgress);
+    video.addEventListener('progress', updateBuffer);
+    video.addEventListener('loadedmetadata', updateTimeDisplay);
+    video.addEventListener('durationchange', updateTimeDisplay);
+
+    // Initial update
+    updateProgress();
+    updateBuffer();
+    updateTimeDisplay();
+}
+
+
+// =============================================================================
+// Main Setup Function
+// =============================================================================
+
+function createCustomControls(video) {
+    const playerContainer = findPlayerContainer(video);
+    if (!playerContainer) {
+        console.log('[YouToob] No player container found');
+        return;
+    }
+
+    ensureRelativePositioning(playerContainer);
+
+    // Create and append overlay (cleanup already done at script start)
+    const overlay = document.createElement('div');
+    overlay.id = 'youtoob-controls';
+    overlay.innerHTML = getOverlayHTML();
+    playerContainer.appendChild(overlay);
+
+    // Store reference globally for cleanup on re-injection
+    window._youtoobOverlay = overlay;
+    window._youtoobPlayerContainer = playerContainer;
+
+    // Get element references
+    const elements = {
+        playPauseBtn: document.getElementById('youtoob-play-pause'),
+        speedBtn: document.getElementById('youtoob-speed'),
+        speedMenu: document.getElementById('youtoob-speed-menu'),
+        qualityBtn: document.getElementById('youtoob-quality'),
+        qualityMenu: document.getElementById('youtoob-quality-menu'),
+        skipBackIndicator: document.getElementById('youtoob-skip-back'),
+        skipForwardIndicator: document.getElementById('youtoob-skip-forward'),
+        skipBackText: document.getElementById('youtoob-skip-back-text'),
+        skipForwardText: document.getElementById('youtoob-skip-forward-text'),
+        leftZone: document.getElementById('youtoob-left-zone'),
+        centerZone: document.getElementById('youtoob-center-zone'),
+        rightZone: document.getElementById('youtoob-right-zone')
+    };
+
+    // Create controls manager
+    const controls = createControlsManager(overlay, elements.speedMenu, elements.qualityMenu, video);
+
+    // Setup tap zones
+    const handleLeftTap = createDoubleTapHandler(
+        video, elements.skipBackIndicator, elements.skipBackText, 'back', controls
+    );
+    const handleRightTap = createDoubleTapHandler(
+        video, elements.skipForwardIndicator, elements.skipForwardText, 'forward', controls
+    );
+
+    // Touch handlers (touchstart for immediate response)
+    elements.leftZone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleLeftTap(e);
+    }, { passive: false });
+    elements.rightZone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleRightTap(e);
+    }, { passive: false });
+    elements.centerZone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        controls.toggle();
+    }, { passive: false });
+    // Click handlers for desktop
+    elements.leftZone.addEventListener('click', handleLeftTap);
+    elements.rightZone.addEventListener('click', handleRightTap);
+    elements.centerZone.addEventListener('click', (e) => {
+        e.stopPropagation();
+        controls.toggle();
+    });
+
+    // Setup all controls
+    setupPlaybackControls(video, elements.playPauseBtn, controls);
+    setupQualityDisplay(video, elements.qualityBtn);
+    setupQualityMenu(elements.qualityMenu, controls);
+    setupSpeedMenu(video, elements.speedBtn, elements.speedMenu, controls);
+    setupFullscreen(overlay, controls);
+    setupSeekBar(video, controls);
+
+    // Menu toggle buttons
+    elements.speedBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        elements.qualityMenu.classList.remove('show');
+        elements.speedMenu.classList.toggle('show');
+        controls.show();
+    });
+
+    elements.qualityBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        elements.speedMenu.classList.remove('show');
+        elements.qualityMenu.classList.toggle('show');
+        controls.show();
+    });
+
+    // Show controls initially
+    controls.show();
+}
+
+// =============================================================================
+// Initialize
+// =============================================================================
+
+// Just create controls - content_script.js handles SPA navigation re-injection
+waitForVideo(createCustomControls);
+
 })();
