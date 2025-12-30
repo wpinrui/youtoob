@@ -18,7 +18,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.wpinrui.youtoob.ui.DownloadsActivity
 import com.wpinrui.youtoob.ui.GeckoViewScreen
-import com.wpinrui.youtoob.ui.SettingsActivity
 import com.wpinrui.youtoob.ui.components.YoutoobBottomNav
 import com.wpinrui.youtoob.ui.navigation.NavDestination
 import com.wpinrui.youtoob.ui.theme.YouToobTheme
@@ -58,9 +57,6 @@ class MainActivity : ComponentActivity() {
                                     }
                                     destination == NavDestination.DOWNLOADS -> {
                                         startActivity(Intent(this@MainActivity, DownloadsActivity::class.java))
-                                    }
-                                    destination == NavDestination.SETTINGS -> {
-                                        startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
                                     }
                                 }
                             },
