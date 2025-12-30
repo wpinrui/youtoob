@@ -183,7 +183,7 @@ function setupGestures(video, overlay) {
         window._youtoobNavigatingBack = true;
         resetTransform(false);
         location.href = 'youtoob://goback';
-        setTimeout(() => { window._youtoobNavigatingBack = false; }, 500);
+        setTimeout(() => { window._youtoobNavigatingBack = false; }, NAVIGATE_BACK_DEBOUNCE_MS);
     }
 
     // Attach to document instead of overlay - overlay moves during fullscreen which corrupts touch handling
