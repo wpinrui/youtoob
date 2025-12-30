@@ -9,7 +9,9 @@ class GeckoSessionDelegate(
     private val onFullscreenChange: (Boolean) -> Unit,
     private val onMediaPlaying: () -> Unit,
     private val onMediaStopped: () -> Unit,
-    private val permissionBridge: PermissionBridge
+    private val permissionBridge: PermissionBridge,
+    private val onPageLoaded: (GeckoSession) -> Unit = {},
+    private val onUrlChange: (String, GeckoSession) -> Unit = { _, _ -> }
 ) : GeckoSession.ContentDelegate,
     GeckoSession.PermissionDelegate,
     GeckoSession.ProgressDelegate,
@@ -83,5 +85,17 @@ class GeckoSessionDelegate(
 
     override fun onStop(session: GeckoSession, mediaSession: MediaSession) {
         onMediaStopped()
+    }
+
+    // ProgressDelegate - Detect page loads for CSS injection
+    override fun onPageStop(session: GeckoSession, success: Boolean) {
+        if (success) {
+            onPageLoaded(session)
+        }
+    }
+
+    // NavigationDelegate - Track URL changes
+    override fun onLocationChange(session: GeckoSession, url: String?, perms: MutableList<GeckoSession.PermissionDelegate.ContentPermission>, hasUserGesture: Boolean) {
+        url?.let { onUrlChange(it, session) }
     }
 }
