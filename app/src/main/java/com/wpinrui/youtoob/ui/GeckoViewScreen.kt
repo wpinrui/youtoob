@@ -8,7 +8,6 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -32,7 +31,6 @@ import com.wpinrui.youtoob.utils.PermissionBridge
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
-private const val TAG = "YTB_Player"
 private const val SPA_NAVIGATION_DELAY_MS = 1000L
 
 private val HIDE_YOUTUBE_BOTTOM_NAV_CSS = """
@@ -45,10 +43,7 @@ private val HIDE_YOUTUBE_BOTTOM_NAV_CSS = """
     }
 """.trimIndent()
 
-private fun injectScripts(session: GeckoSession, context: Context, isVideoPage: Boolean) {
-    Log.d(TAG, "injectScripts called, isVideoPage=$isVideoPage")
-
-    // CSS injection only - player controls via javascript: URI is too limited in GeckoView
+private fun injectCss(session: GeckoSession) {
     val cssScript = """
         (function() {
             var style = document.getElementById('youtoob-custom-style');
@@ -62,7 +57,6 @@ private fun injectScripts(session: GeckoSession, context: Context, isVideoPage: 
     """.trimIndent()
 
     session.loadUri("javascript:$cssScript")
-    Log.d(TAG, "CSS injected")
 }
 
 @Composable
@@ -126,19 +120,16 @@ fun GeckoViewScreen(
             },
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
-                Log.d(TAG, "onPageLoaded, currentUrl=$currentUrl")
-                injectScripts(session, context, currentUrl.contains("/watch"))
+                injectCss(session)
             },
             onUrlChange = { url, session ->
-                Log.d(TAG, "onUrlChange: $url")
                 val wasVideoPage = currentUrl.contains("/watch")
                 val isVideoPage = url.contains("/watch")
                 currentUrl = url
                 // Inject on SPA navigation to video page
                 if (isVideoPage && !wasVideoPage) {
-                    Log.d(TAG, "SPA navigation to video page, injecting after delay")
                     Handler(Looper.getMainLooper()).postDelayed({
-                        injectScripts(session, context, true)
+                        injectCss(session)
                     }, SPA_NAVIGATION_DELAY_MS)
                 }
             }
