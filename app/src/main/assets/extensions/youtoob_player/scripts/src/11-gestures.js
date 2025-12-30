@@ -19,11 +19,6 @@ function setupGestures(video, overlay) {
 
     // Constants defined in 02-constants.js: DRAG_THRESHOLD, COMPLETE_THRESHOLD, LONG_PRESS_DELAY_MS, PINCH_THRESHOLD
 
-    // Get the video element for transforms
-    function getVideoElement() {
-        return video;
-    }
-
     function getPlayerContainer() {
         return window._youtoobPlayerContainer || video.parentElement;
     }
@@ -94,8 +89,7 @@ function setupGestures(video, overlay) {
     // Apply progressive transform during drag
     function applyDragTransform(deltaY) {
         const container = getPlayerContainer();
-        const videoEl = getVideoElement();
-        if (!container || !videoEl) return;
+        if (!container) return;
 
         if (!isFullscreen()) {
             // Portrait mode: dragging UP to enter fullscreen
@@ -104,9 +98,9 @@ function setupGestures(video, overlay) {
                 const progress = Math.min(Math.abs(deltaY + DRAG_THRESHOLD) / COMPLETE_THRESHOLD, 1);
                 const scale = 1 + (progress * 0.3); // Scale up to 1.3x for dramatic effect
                 const translateY = -progress * 20; // Move up toward notification bar
-                videoEl.style.transition = 'none';
-                videoEl.style.transform = `scale(${scale}) translateY(${translateY}px)`;
-                videoEl.style.transformOrigin = 'center center';
+                video.style.transition = 'none';
+                video.style.transform = `scale(${scale}) translateY(${translateY}px)`;
+                video.style.transformOrigin = 'center center';
             }
         } else {
             // Fullscreen mode: dragging DOWN to exit
@@ -114,27 +108,24 @@ function setupGestures(video, overlay) {
             if (deltaY > DRAG_THRESHOLD) {
                 const translateY = Math.min(deltaY - DRAG_THRESHOLD, COMPLETE_THRESHOLD * 1.5);
                 const scale = 1 - (translateY / (COMPLETE_THRESHOLD * 10)); // Slight scale down
-                videoEl.style.transition = 'none';
-                videoEl.style.transform = `translateY(${translateY}px) scale(${Math.max(scale, 0.9)})`;
-                videoEl.style.transformOrigin = 'center top';
+                video.style.transition = 'none';
+                video.style.transform = `translateY(${translateY}px) scale(${Math.max(scale, 0.9)})`;
+                video.style.transformOrigin = 'center top';
             }
         }
     }
 
     // Reset transform with animation
     function resetTransform(animate = true) {
-        const videoEl = getVideoElement();
-        if (!videoEl) return;
-
         if (animate) {
-            videoEl.style.transition = 'transform 0.25s ease-out';
+            video.style.transition = 'transform 0.25s ease-out';
         }
-        videoEl.style.transform = '';
-        videoEl.style.transformOrigin = '';
+        video.style.transform = '';
+        video.style.transformOrigin = '';
 
         if (animate) {
             setTimeout(() => {
-                videoEl.style.transition = '';
+                video.style.transition = '';
             }, 250);
         }
     }
