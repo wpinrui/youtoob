@@ -93,7 +93,7 @@ function setupFullscreen(overlay, controls) {
     document.addEventListener('webkitfullscreenchange', window._youtoobFsHandler);
 
     // Poll for fullscreen (YouTube sometimes doesn't trigger events)
-    window._youtoobFsInterval = setInterval(checkFullscreen, 500);
+    window._youtoobFsInterval = setInterval(checkFullscreen, FULLSCREEN_POLL_INTERVAL_MS);
 }
 
 // =============================================================================
