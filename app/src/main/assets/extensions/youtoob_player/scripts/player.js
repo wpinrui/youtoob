@@ -57,6 +57,10 @@
             bottom: 0 !important;
             z-index: 99999 !important;
             pointer-events: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
         }
         #youtoob-controls.show-controls .youtoob-center-controls {
             opacity: 1;
@@ -282,15 +286,22 @@
     // Controls Visibility Management
     // =============================================================================
 
-    function createControlsManager(overlay, speedMenu, qualityMenu) {
+    function createControlsManager(overlay, speedMenu, qualityMenu, video) {
         let visible = false;
         let hideTimeout = null;
+
+        function scheduleHide() {
+            clearTimeout(hideTimeout);
+            // Don't auto-hide if video is paused
+            if (!video.paused) {
+                hideTimeout = setTimeout(hide, CONTROLS_AUTO_HIDE_MS);
+            }
+        }
 
         function show() {
             visible = true;
             overlay.classList.add('show-controls');
-            clearTimeout(hideTimeout);
-            hideTimeout = setTimeout(hide, CONTROLS_AUTO_HIDE_MS);
+            scheduleHide();
         }
 
         function hide() {
@@ -307,6 +318,11 @@
                 show();
             }
         }
+
+        // When video plays, schedule hide if controls are visible
+        video.addEventListener('play', () => {
+            if (visible) scheduleHide();
+        });
 
         return { show, hide, toggle };
     }
@@ -545,7 +561,7 @@
         };
 
         // Create controls manager
-        const controls = createControlsManager(overlay, elements.speedMenu, elements.qualityMenu);
+        const controls = createControlsManager(overlay, elements.speedMenu, elements.qualityMenu, video);
 
         // Setup tap zones
         const handleLeftTap = createDoubleTapHandler(
