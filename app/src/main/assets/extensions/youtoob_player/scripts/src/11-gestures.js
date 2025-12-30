@@ -3,6 +3,20 @@
 // =============================================================================
 
 function setupGestures(video, overlay) {
+    // Store video reference on window - handlers use this to access current video
+    // This allows handlers to work with the new video element after re-injection
+    window._youtoobGestureVideo = video;
+
+    // Only setup event handlers once - they use window._youtoobGestureVideo
+    // which gets updated on each setupGestures call
+    if (window._youtoobGesturesInitialized) return;
+    window._youtoobGesturesInitialized = true;
+
+    // Helper to get current video (may change on re-injection)
+    function getVideo() {
+        return window._youtoobGestureVideo;
+    }
+
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTime = 0;
@@ -20,15 +34,15 @@ function setupGestures(video, overlay) {
     // Constants defined in 02-constants.js: DRAG_THRESHOLD, COMPLETE_THRESHOLD, LONG_PRESS_DELAY_MS, PINCH_THRESHOLD
 
     function getPlayerContainer() {
-        return window._youtoobPlayerContainer || video.parentElement;
+        return window._youtoobPlayerContainer || getVideo().parentElement;
     }
 
     // Long press for 2x speed
     function startLongPressTimer() {
         longPressTimer = setTimeout(() => {
             isLongPress = true;
-            originalSpeed = video.playbackRate;
-            video.playbackRate = LONG_PRESS_SPEED_MULTIPLIER;
+            originalSpeed = getVideo().playbackRate;
+            getVideo().playbackRate = LONG_PRESS_SPEED_MULTIPLIER;
         }, LONG_PRESS_DELAY_MS);
     }
 
@@ -38,7 +52,7 @@ function setupGestures(video, overlay) {
             longPressTimer = null;
         }
         if (isLongPress) {
-            video.playbackRate = originalSpeed;
+            getVideo().playbackRate = originalSpeed;
             isLongPress = false;
         }
     }
@@ -62,7 +76,8 @@ function setupGestures(video, overlay) {
 
     // Calculate max scale needed to fill the screen
     function getFillScale() {
-        const videoAspect = video.videoWidth / video.videoHeight;
+        const v = getVideo();
+        const videoAspect = v.videoWidth / v.videoHeight;
         const screenAspect = window.innerWidth / window.innerHeight;
         if (screenAspect > videoAspect) {
             return screenAspect / videoAspect;
@@ -73,31 +88,34 @@ function setupGestures(video, overlay) {
 
     // Apply scale during pinch (no transition - follows fingers)
     function applyPinchScale(scale) {
-        video.style.transition = 'none';
-        video.style.transform = scale === 1 ? '' : `scale(${scale})`;
-        video.style.transformOrigin = 'center center';
+        const v = getVideo();
+        v.style.transition = 'none';
+        v.style.transform = scale === 1 ? '' : `scale(${scale})`;
+        v.style.transformOrigin = 'center center';
     }
 
     // Snap to fill or fit with animation
     function snapToFillMode(fill) {
+        const v = getVideo();
         isFillMode = fill;
-        video.style.transition = `transform ${PINCH_SNAP_ANIMATION_MS}ms ease-out`;
+        v.style.transition = `transform ${PINCH_SNAP_ANIMATION_MS}ms ease-out`;
         if (fill) {
             const scale = getFillScale();
-            video.style.transform = `scale(${scale})`;
+            v.style.transform = `scale(${scale})`;
         } else {
-            video.style.transform = '';
+            v.style.transform = '';
         }
-        video.style.transformOrigin = 'center center';
+        v.style.transformOrigin = 'center center';
     }
 
     // Apply shrink/translate transform for swipe-down gesture (same in portrait and fullscreen)
     function applySwipeDownTransform(deltaY) {
+        const v = getVideo();
         const translateY = Math.min(deltaY - DRAG_THRESHOLD, COMPLETE_THRESHOLD * EXIT_FULLSCREEN_TRANSLATE_LIMIT);
         const scale = 1 - (translateY / (COMPLETE_THRESHOLD * EXIT_FULLSCREEN_SCALE_DIVISOR));
-        video.style.transition = 'none';
-        video.style.transform = `translateY(${translateY}px) scale(${Math.max(scale, EXIT_FULLSCREEN_MIN_SCALE)})`;
-        video.style.transformOrigin = 'center top';
+        v.style.transition = 'none';
+        v.style.transform = `translateY(${translateY}px) scale(${Math.max(scale, EXIT_FULLSCREEN_MIN_SCALE)})`;
+        v.style.transformOrigin = 'center top';
     }
 
     // Apply progressive transform during drag
@@ -105,14 +123,16 @@ function setupGestures(video, overlay) {
         const container = getPlayerContainer();
         if (!container) return;
 
+        const v = getVideo();
+
         // Portrait mode: dragging UP to enter fullscreen
         if (!isFullscreen() && deltaY < -DRAG_THRESHOLD) {
             const progress = Math.min(Math.abs(deltaY + DRAG_THRESHOLD) / COMPLETE_THRESHOLD, 1);
             const scale = 1 + (progress * DRAG_SCALE_FACTOR);
             const translateY = -progress * DRAG_TRANSLATE_Y;
-            video.style.transition = 'none';
-            video.style.transform = `scale(${scale}) translateY(${translateY}px)`;
-            video.style.transformOrigin = 'center center';
+            v.style.transition = 'none';
+            v.style.transform = `scale(${scale}) translateY(${translateY}px)`;
+            v.style.transformOrigin = 'center center';
         }
 
         // Both modes: dragging DOWN (portrait: go back, fullscreen: exit)
@@ -123,15 +143,16 @@ function setupGestures(video, overlay) {
 
     // Reset transform with animation
     function resetTransform(animate = true) {
+        const v = getVideo();
         if (animate) {
-            video.style.transition = `transform ${TRANSFORM_ANIMATION_MS}ms ease-out`;
+            v.style.transition = `transform ${TRANSFORM_ANIMATION_MS}ms ease-out`;
         }
-        video.style.transform = '';
-        video.style.transformOrigin = '';
+        v.style.transform = '';
+        v.style.transformOrigin = '';
 
         if (animate) {
             setTimeout(() => {
-                video.style.transition = '';
+                getVideo().style.transition = '';
             }, TRANSFORM_ANIMATION_MS);
         }
     }
@@ -154,9 +175,15 @@ function setupGestures(video, overlay) {
     }
 
     // Navigate back (for swipe down in portrait)
+    // Uses custom URL scheme to trigger native GeckoSession.goBack() instead of JS history.back()
+    // This avoids issues with YouTube's SPA intercepting history.back() calls
+    // Uses window flag to prevent multiple triggers across script instances
     function navigateBack() {
+        if (window._youtoobNavigatingBack) return;
+        window._youtoobNavigatingBack = true;
         resetTransform(false);
-        history.back();
+        location.href = 'youtoob://goback';
+        setTimeout(() => { window._youtoobNavigatingBack = false; }, NAVIGATE_BACK_DEBOUNCE_MS);
     }
 
     // Attach to document instead of overlay - overlay moves during fullscreen which corrupts touch handling
@@ -264,7 +291,7 @@ function setupGestures(video, overlay) {
         // Reset pinch state - snap to fill or fit based on current scale
         if (isPinching) {
             // Get current transform to determine which mode to snap to
-            const currentTransform = video.style.transform;
+            const currentTransform = getVideo().style.transform;
             const scaleMatch = currentTransform.match(/scale\(([^)]+)\)/);
             const currentScale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
             const fillScale = getFillScale();

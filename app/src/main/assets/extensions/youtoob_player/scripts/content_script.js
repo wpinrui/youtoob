@@ -4,6 +4,10 @@
 // This pattern avoids size limits by using web_accessible_resources
 
 (function() {
+    // Guard against multiple content script runs
+    if (window._youtoobContentScriptLoaded) return;
+    window._youtoobContentScriptLoaded = true;
+
     const SPA_NAVIGATION_DELAY_MS = 500;
 
     // Only run on watch pages
@@ -32,7 +36,7 @@
         injectPlayerScript();
     }
 
-    // Re-inject on SPA navigation
+    // Re-inject on SPA navigation (only one observer needed)
     let lastUrl = location.href;
     const observer = new MutationObserver(() => {
         if (location.href !== lastUrl) {
