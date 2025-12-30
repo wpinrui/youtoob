@@ -48,7 +48,7 @@ class SettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            YouToobTheme {
+            YouToobTheme(darkTheme = true, dynamicColor = false) {
                 val context = LocalContext.current
                 val repository = remember { SettingsRepository(context) }
                 val settings by repository.settings.collectAsState(initial = YoutoobSettings())

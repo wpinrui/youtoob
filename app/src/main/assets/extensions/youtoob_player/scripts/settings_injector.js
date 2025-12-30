@@ -89,6 +89,10 @@
         // Insert at the top of the container
         if (container.firstChild) {
             container.insertBefore(item, container.firstChild);
+            // Remove border-top from the next sibling (Switch account) to avoid double divider
+            if (item.nextElementSibling) {
+                item.nextElementSibling.style.borderTop = 'none';
+            }
         } else {
             container.appendChild(item);
         }
