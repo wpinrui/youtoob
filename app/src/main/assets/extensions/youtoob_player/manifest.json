@@ -5,14 +5,19 @@
   "description": "Custom player controls for YouTube",
   "content_scripts": [
     {
-      "matches": ["*://m.youtube.com/*", "*://www.youtube.com/*"],
+      "matches": ["https://*.youtube.com/*"],
       "js": ["content.js"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": true
     }
   ],
   "browser_specific_settings": {
     "gecko": {
-      "id": "youtoob-player@youtoob.app"
+      "id": "youtoob-player@youtoob.app",
+      "strict_min_version": "102.0"
+    },
+    "gecko_android": {
+      "strict_min_version": "113.0"
     }
   }
 }
