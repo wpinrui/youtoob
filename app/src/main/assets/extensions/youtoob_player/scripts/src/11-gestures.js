@@ -1,21 +1,29 @@
 // =============================================================================
-// Gesture Handling (swipe, long-press)
+// Gesture Handling (progressive swipe, long-press, pinch)
 // =============================================================================
 
-function setupGestures(video, overlay, controls) {
+function setupGestures(video, overlay) {
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTime = 0;
     let longPressTimer = null;
     let isLongPress = false;
     let originalSpeed = 1;
+    let isDragging = false;
+    let dragDirection = null; // 'up' or 'down'
 
-    const SWIPE_THRESHOLD = 80;  // Minimum distance for swipe
-    const LONG_PRESS_DELAY = 500;  // ms to trigger long press
+    const DRAG_THRESHOLD = 30;  // Min distance to start progressive drag
+    const COMPLETE_THRESHOLD = 100;  // Distance to complete fullscreen toggle
+    const LONG_PRESS_DELAY = 400;  // ms to trigger long press
 
-    // Get the tap zones for gesture detection
-    const tapZones = overlay.querySelector('.youtoob-tap-zones');
-    if (!tapZones) return;
+    // Get the video element for transforms
+    function getVideoElement() {
+        return video;
+    }
+
+    function getPlayerContainer() {
+        return window._youtoobPlayerContainer || video.parentElement;
+    }
 
     // Long press for 2x speed
     function startLongPressTimer() {
@@ -23,7 +31,6 @@ function setupGestures(video, overlay, controls) {
             isLongPress = true;
             originalSpeed = video.playbackRate;
             video.playbackRate = 2;
-            // Visual feedback - could add indicator here
         }, LONG_PRESS_DELAY);
     }
 
@@ -38,79 +45,196 @@ function setupGestures(video, overlay, controls) {
         }
     }
 
-    // Swipe detection
-    function handleSwipe(deltaX, deltaY) {
-        const absX = Math.abs(deltaX);
-        const absY = Math.abs(deltaY);
-
-        // Vertical swipe must be dominant
-        if (absY > absX && absY > SWIPE_THRESHOLD) {
-            if (deltaY < 0) {
-                // Swipe up - enter fullscreen
-                if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                    const target = video.parentElement || video;
-                    if (target.requestFullscreen) {
-                        target.requestFullscreen();
-                    } else if (target.webkitRequestFullscreen) {
-                        target.webkitRequestFullscreen();
-                    }
-                }
-            } else {
-                // Swipe down - exit fullscreen
-                if (document.fullscreenElement || document.webkitFullscreenElement) {
-                    if (document.exitFullscreen) {
-                        document.exitFullscreen();
-                    } else if (document.webkitExitFullscreen) {
-                        document.webkitExitFullscreen();
-                    }
-                }
-            }
-            return true;
-        }
-        return false;
+    // Check if we're in fullscreen
+    function isFullscreen() {
+        return !!(document.fullscreenElement || document.webkitFullscreenElement);
     }
 
-    // Touch event handlers
-    tapZones.addEventListener('touchstart', (e) => {
-        // Don't interfere with seek bar
-        if (e.target.closest('.youtoob-seek-bar')) return;
+    // Apply progressive transform during drag
+    function applyDragTransform(deltaY) {
+        const container = getPlayerContainer();
+        const videoEl = getVideoElement();
+        if (!container || !videoEl) return;
+
+        if (!isFullscreen()) {
+            // Portrait mode: dragging UP to enter fullscreen
+            // Scale video and translate up as user drags (fills toward notification bar)
+            if (deltaY < -DRAG_THRESHOLD) {
+                const progress = Math.min(Math.abs(deltaY + DRAG_THRESHOLD) / COMPLETE_THRESHOLD, 1);
+                const scale = 1 + (progress * 0.3); // Scale up to 1.3x for dramatic effect
+                const translateY = -progress * 20; // Move up toward notification bar
+                videoEl.style.transition = 'none';
+                videoEl.style.transform = `scale(${scale}) translateY(${translateY}px)`;
+                videoEl.style.transformOrigin = 'center center';
+            }
+        } else {
+            // Fullscreen mode: dragging DOWN to exit
+            // Translate video down as user drags
+            if (deltaY > DRAG_THRESHOLD) {
+                const translateY = Math.min(deltaY - DRAG_THRESHOLD, COMPLETE_THRESHOLD * 1.5);
+                const scale = 1 - (translateY / (COMPLETE_THRESHOLD * 10)); // Slight scale down
+                videoEl.style.transition = 'none';
+                videoEl.style.transform = `translateY(${translateY}px) scale(${Math.max(scale, 0.9)})`;
+                videoEl.style.transformOrigin = 'center top';
+            }
+        }
+    }
+
+    // Reset transform with animation
+    function resetTransform(animate = true) {
+        const videoEl = getVideoElement();
+        if (!videoEl) return;
+
+        if (animate) {
+            videoEl.style.transition = 'transform 0.25s ease-out';
+        }
+        videoEl.style.transform = '';
+        videoEl.style.transformOrigin = '';
+
+        if (animate) {
+            setTimeout(() => {
+                videoEl.style.transition = '';
+            }, 250);
+        }
+    }
+
+    // Complete fullscreen enter with animation
+    function completeFullscreenEnter() {
+        const videoEl = getVideoElement();
+        const container = getPlayerContainer();
+
+        // Animate to full scale before entering fullscreen
+        if (videoEl) {
+            videoEl.style.transition = 'transform 0.15s ease-out';
+            videoEl.style.transform = 'scale(1.5) translateY(-30px)';
+        }
+
+        setTimeout(() => {
+            resetTransform(false);
+            const target = container || video.parentElement || video;
+            if (target.requestFullscreen) {
+                target.requestFullscreen();
+            } else if (target.webkitRequestFullscreen) {
+                target.webkitRequestFullscreen();
+            }
+        }, 120);
+    }
+
+    // Complete fullscreen exit with animation
+    function completeFullscreenExit() {
+        const videoEl = getVideoElement();
+
+        if (videoEl) {
+            videoEl.style.transition = 'transform 0.2s ease-out';
+            videoEl.style.transform = 'translateY(100px) scale(0.85)';
+        }
+
+        setTimeout(() => {
+            resetTransform(false);
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+        }, 100);
+    }
+
+    // Use capture phase on overlay to intercept events before child handlers
+    overlay.addEventListener('touchstart', (e) => {
+        // Don't interfere with seek bar or buttons
+        if (e.target.closest('.youtoob-seek-bar') ||
+            e.target.closest('.youtoob-btn') ||
+            e.target.closest('.youtoob-action-btn') ||
+            e.target.closest('.youtoob-pill-btn') ||
+            e.target.closest('.youtoob-fullscreen-btn') ||
+            e.target.closest('.youtoob-menu')) return;
 
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
         touchStartTime = Date.now();
+        isDragging = false;
+        dragDirection = null;
 
         // Start long press detection
         startLongPressTimer();
-    }, { passive: true });
+    }, { capture: true, passive: true });
 
-    tapZones.addEventListener('touchmove', (e) => {
-        // Cancel long press if user moves
-        const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
-        const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-        if (deltaX > 10 || deltaY > 10) {
+    overlay.addEventListener('touchmove', (e) => {
+        if (touchStartTime === 0) return;
+
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+        const deltaX = currentX - touchStartX;
+        const deltaY = currentY - touchStartY;
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+
+        // Cancel long press if user moves significantly
+        if (absX > 15 || absY > 15) {
             if (longPressTimer) {
                 clearTimeout(longPressTimer);
                 longPressTimer = null;
             }
         }
-    }, { passive: true });
 
-    tapZones.addEventListener('touchend', (e) => {
-        cancelLongPress();
-
-        const touchEndX = e.changedTouches[0].clientX;
-        const touchEndY = e.changedTouches[0].clientY;
-        const deltaX = touchEndX - touchStartX;
-        const deltaY = touchEndY - touchStartY;
-        const duration = Date.now() - touchStartTime;
-
-        // Only process swipe if it was a quick gesture (< 300ms)
-        if (duration < 300) {
-            handleSwipe(deltaX, deltaY);
+        // Detect vertical drag direction
+        if (!isDragging && absY > DRAG_THRESHOLD && absY > absX) {
+            isDragging = true;
+            dragDirection = deltaY < 0 ? 'up' : 'down';
         }
-    }, { passive: true });
 
-    tapZones.addEventListener('touchcancel', () => {
+        // Apply progressive transform
+        if (isDragging) {
+            // Only allow up in portrait, down in fullscreen
+            if ((dragDirection === 'up' && !isFullscreen()) ||
+                (dragDirection === 'down' && isFullscreen())) {
+                applyDragTransform(deltaY);
+            }
+        }
+    }, { capture: true, passive: true });
+
+    overlay.addEventListener('touchend', (e) => {
         cancelLongPress();
-    }, { passive: true });
+
+        if (touchStartTime === 0) return;
+
+        const touchEndY = e.changedTouches[0].clientY;
+        const deltaY = touchEndY - touchStartY;
+
+        // Reset touch state
+        touchStartTime = 0;
+
+        if (isDragging) {
+            // Check if drag was far enough to complete action
+            if (dragDirection === 'up' && !isFullscreen() && deltaY < -COMPLETE_THRESHOLD) {
+                // Complete fullscreen enter
+                completeFullscreenEnter();
+            } else if (dragDirection === 'down' && isFullscreen() && deltaY > COMPLETE_THRESHOLD) {
+                // Complete fullscreen exit
+                completeFullscreenExit();
+            } else {
+                // Snap back
+                resetTransform(true);
+            }
+
+            isDragging = false;
+            dragDirection = null;
+        }
+    }, { capture: true, passive: true });
+
+    overlay.addEventListener('touchcancel', () => {
+        cancelLongPress();
+        touchStartTime = 0;
+        isDragging = false;
+        dragDirection = null;
+        resetTransform(true);
+    }, { capture: true, passive: true });
+
+    // Clean up transform on fullscreen change (in case browser handles it)
+    document.addEventListener('fullscreenchange', () => {
+        resetTransform(false);
+    });
+    document.addEventListener('webkitfullscreenchange', () => {
+        resetTransform(false);
+    });
 }
