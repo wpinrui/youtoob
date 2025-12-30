@@ -23,6 +23,12 @@ enum class BundledExtension(
         displayName = "YouTube High Definition",
         folderName = "youtube_hd",
         defaultEnabled = true
+    ),
+    YOUTOOB_PLAYER(
+        id = "youtoob-player@youtoob.app",
+        displayName = "Youtoob Player",
+        folderName = "youtoob_player",
+        defaultEnabled = true
     );
 
     val builtInUri: String

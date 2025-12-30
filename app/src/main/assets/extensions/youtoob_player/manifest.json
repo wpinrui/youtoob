@@ -1,0 +1,18 @@
+{
+  "manifest_version": 2,
+  "name": "Youtoob Player",
+  "version": "1.0",
+  "description": "Custom player controls for YouTube",
+  "content_scripts": [
+    {
+      "matches": ["*://m.youtube.com/*", "*://www.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "youtoob-player@youtoob.app"
+    }
+  }
+}

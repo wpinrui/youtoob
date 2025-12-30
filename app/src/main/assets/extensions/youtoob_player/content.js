@@ -1,7 +1,43 @@
+// Youtoob Player - Content Script
+// Hides YouTube bottom nav and adds custom player controls
+
 (function() {
-    // Don't run if already injected
-    if (window.youtoobPlayerInjected) return;
-    window.youtoobPlayerInjected = true;
+    'use strict';
+
+    console.log('[Youtoob] Content script loaded');
+
+    // CSS to hide YouTube bottom navigation
+    const hideBottomNavCSS = `
+        ytm-pivot-bar-renderer,
+        ytm-pivot-bar-item-renderer {
+            display: none !important;
+        }
+        ytm-app {
+            padding-bottom: 0 !important;
+        }
+    `;
+
+    // Inject CSS immediately
+    function injectCSS() {
+        if (document.getElementById('youtoob-custom-style')) return;
+        const style = document.createElement('style');
+        style.id = 'youtoob-custom-style';
+        style.textContent = hideBottomNavCSS;
+        (document.head || document.documentElement).appendChild(style);
+        console.log('[Youtoob] CSS injected');
+    }
+
+    // Try to inject CSS as early as possible
+    if (document.head) {
+        injectCSS();
+    } else {
+        document.addEventListener('DOMContentLoaded', injectCSS);
+    }
+
+    // Player controls - only on watch pages
+    function isWatchPage() {
+        return location.href.includes('/watch');
+    }
 
     // Wait for video element
     function waitForVideo(callback) {
@@ -26,12 +62,17 @@
 
     // Create custom controls overlay
     function createCustomControls(video) {
+        console.log('[Youtoob] Creating custom controls');
+
         // Find the player container
         const playerContainer = document.querySelector('.html5-video-player') ||
                                document.querySelector('ytm-player') ||
                                video.parentElement;
 
-        if (!playerContainer) return;
+        if (!playerContainer) {
+            console.log('[Youtoob] No player container found');
+            return;
+        }
 
         // Remove existing custom controls if any
         const existing = document.getElementById('youtoob-controls');
@@ -460,24 +501,39 @@
             speedBtn.textContent = rate === 1 ? '1.0' : rate.toString();
         });
 
-        console.log('Youtoob custom player controls injected');
+        console.log('[Youtoob] Custom player controls injected');
     }
 
-    // Initialize
-    waitForVideo(createCustomControls);
+    // Initialize player controls on watch pages
+    let playerInjected = false;
 
-    // Re-inject on navigation (YouTube SPA)
+    function initPlayerIfNeeded() {
+        if (isWatchPage() && !playerInjected) {
+            playerInjected = true;
+            waitForVideo(createCustomControls);
+        }
+    }
+
+    // Run on initial load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPlayerIfNeeded);
+    } else {
+        initPlayerIfNeeded();
+    }
+
+    // Handle SPA navigation
     let lastUrl = location.href;
     new MutationObserver(() => {
         if (location.href !== lastUrl) {
             lastUrl = location.href;
-            if (location.href.includes('/watch')) {
-                window.youtoobPlayerInjected = false;
+            injectCSS(); // Re-inject CSS on navigation
+            if (isWatchPage()) {
+                playerInjected = false;
                 setTimeout(() => {
-                    window.youtoobPlayerInjected = true;
-                    waitForVideo(createCustomControls);
+                    initPlayerIfNeeded();
                 }, 1000);
             }
         }
-    }).observe(document.body, { subtree: true, childList: true });
+    }).observe(document.body || document.documentElement, { subtree: true, childList: true });
+
 })();
