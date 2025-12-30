@@ -17,8 +17,8 @@ function setupGestures(video, overlay) {
     let initialPinchDistance = 0;
     let isFillMode = false; // false = fit (contain), true = fill (cover)
 
-    const DRAG_THRESHOLD = 30;  // Min distance to start progressive drag
-    const COMPLETE_THRESHOLD = 100;  // Distance to complete fullscreen toggle
+    const DRAG_THRESHOLD = 20;  // Min distance to start progressive drag
+    const COMPLETE_THRESHOLD = 60;  // Distance to complete fullscreen toggle
     const LONG_PRESS_DELAY = 400;  // ms to trigger long press
     const PINCH_THRESHOLD = 50;  // Min distance change to toggle fill mode
 
