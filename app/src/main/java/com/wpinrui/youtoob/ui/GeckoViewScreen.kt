@@ -101,38 +101,38 @@ private fun injectScripts(session: GeckoSession, context: Context, isVideoPage: 
     )
     android.util.Log.d(TAG, "Base64 encoded, ${base64Js.length} chars")
 
-    val combinedScript = """
+    // Inject CSS first
+    session.loadUri("javascript:$cssScript")
+
+    // Inject player in chunks to avoid URI length limit
+    val chunkSize = 8000 // Safe chunk size for URI
+    val chunks = base64Js.chunked(chunkSize)
+
+    android.util.Log.d(TAG, "Injecting player in ${chunks.size} chunks")
+
+    // Initialize chunks array
+    session.loadUri("javascript:window._ypc=[]")
+
+    // Add each chunk
+    chunks.forEachIndexed { index, chunk ->
+        session.loadUri("javascript:window._ypc.push('$chunk')")
+    }
+
+    // Join chunks and execute
+    val execScript = """
         (function() {
-            console.log('[YoutoobPlayer] Combined script starting');
-            // CSS
-            var style = document.getElementById('youtoob-custom-style');
-            if (!style) {
-                style = document.createElement('style');
-                style.id = 'youtoob-custom-style';
-                style.textContent = `$HIDE_YOUTUBE_BOTTOM_NAV_CSS`;
-                document.head.appendChild(style);
-                console.log('[YoutoobPlayer] CSS added');
+            if (window.youtoobPlayerInjected) return;
+            try {
+                var code = atob(window._ypc.join(''));
+                eval(code);
+                console.log('[YoutoobPlayer] Injected successfully');
+            } catch(e) {
+                console.error('[YoutoobPlayer] Injection failed:', e);
             }
-            // Player - decode from base64 and eval
-            console.log('[YoutoobPlayer] youtoobPlayerInjected=' + window.youtoobPlayerInjected);
-            if (!window.youtoobPlayerInjected) {
-                try {
-                    console.log('[YoutoobPlayer] Decoding base64...');
-                    var code = atob('$base64Js');
-                    console.log('[YoutoobPlayer] Decoded ' + code.length + ' chars, evaluating...');
-                    eval(code);
-                    console.log('[YoutoobPlayer] Eval complete');
-                } catch(e) {
-                    console.error('[YoutoobPlayer] Injection failed:', e);
-                }
-            } else {
-                console.log('[YoutoobPlayer] Already injected, skipping');
-            }
+            delete window._ypc;
         })();
     """.trimIndent()
-
-    android.util.Log.d(TAG, "Calling loadUri with javascript: scheme")
-    session.loadUri("javascript:$combinedScript")
+    session.loadUri("javascript:$execScript")
     android.util.Log.d(TAG, "loadUri called")
 }
 
