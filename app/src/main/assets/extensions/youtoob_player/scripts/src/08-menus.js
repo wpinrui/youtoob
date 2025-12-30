@@ -1,4 +1,12 @@
 // =============================================================================
+// Speed Formatting
+// =============================================================================
+
+function formatSpeed(speed) {
+    return Number.isInteger(speed) ? speed.toFixed(1) : speed.toString();
+}
+
+// =============================================================================
 // Quality Menu Setup
 // =============================================================================
 
@@ -54,7 +62,7 @@ function setupSpeedMenu(video, speedBtn, speedMenu, controls) {
             e.stopPropagation();
             const speed = parseFloat(option.dataset.speed);
             video.playbackRate = speed;
-            speedBtn.textContent = speed === 1 ? '1.0' : speed.toString();
+            speedBtn.textContent = formatSpeed(speed);
             document.querySelectorAll('#youtoob-speed-menu .youtoob-menu-option').forEach(opt => opt.classList.remove('active'));
             option.classList.add('active');
             speedMenu.classList.remove('show');
@@ -63,7 +71,6 @@ function setupSpeedMenu(video, speedBtn, speedMenu, controls) {
     });
 
     video.addEventListener('ratechange', () => {
-        const rate = video.playbackRate;
-        speedBtn.textContent = rate === 1 ? '1.0' : rate.toString();
+        speedBtn.textContent = formatSpeed(video.playbackRate);
     });
 }
