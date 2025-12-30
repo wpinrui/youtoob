@@ -24,6 +24,17 @@
       ],
       "run_at": "document_end",
       "all_frames": false
+    },
+    {
+      "js": [
+        "scripts/settings_injector.js"
+      ],
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://m.youtube.com/*"
+      ],
+      "run_at": "document_end",
+      "all_frames": false
     }
   ],
   "web_accessible_resources": [
