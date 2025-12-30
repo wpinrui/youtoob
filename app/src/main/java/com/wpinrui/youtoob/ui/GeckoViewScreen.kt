@@ -9,11 +9,13 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -23,7 +25,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.getSystemService
 import com.wpinrui.youtoob.gecko.GeckoRuntimeProvider
 import com.wpinrui.youtoob.gecko.GeckoSessionDelegate
+import com.wpinrui.youtoob.player.VideoController
 import com.wpinrui.youtoob.ui.navigation.NavDestination
+import com.wpinrui.youtoob.ui.player.PlayerControlsOverlay
 import com.wpinrui.youtoob.utils.PermissionBridge
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
@@ -61,6 +65,8 @@ fun GeckoViewScreen(
     val context = LocalContext.current
     val activity = context as? Activity
     var isFullscreen by remember { mutableStateOf(false) }
+    var isPlaying by remember { mutableStateOf(false) }
+    var currentSpeed by remember { mutableFloatStateOf(1.0f) }
 
     val audioManager = remember { context.getSystemService<AudioManager>() }
     val audioFocusRequest = remember {
@@ -105,9 +111,11 @@ fun GeckoViewScreen(
                 }
             },
             onMediaPlaying = {
+                isPlaying = true
                 audioManager?.requestAudioFocus(audioFocusRequest)
             },
             onMediaStopped = {
+                isPlaying = false
                 audioManager?.abandonAudioFocusRequest(audioFocusRequest)
             },
             permissionBridge = permissionBridge,
@@ -140,14 +148,38 @@ fun GeckoViewScreen(
         }
     }
 
-    AndroidView(
-        factory = { ctx ->
-            GeckoView(ctx).apply {
-                setSession(session)
-            }
-        },
-        modifier = modifier.fillMaxSize()
-    )
+    val videoController = remember(session) { VideoController(session) }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        AndroidView(
+            factory = { ctx ->
+                GeckoView(ctx).apply {
+                    setSession(session)
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        PlayerControlsOverlay(
+            isPlaying = isPlaying,
+            currentSpeed = currentSpeed,
+            onPlayPause = { videoController.togglePlayPause() },
+            onSeekForward = { videoController.seekForward() },
+            onSeekBackward = { videoController.seekBackward() },
+            onPrevious = { /* TODO: Previous video in playlist */ },
+            onNext = { /* TODO: Next video in playlist */ },
+            onSpeedChange = { speed ->
+                currentSpeed = speed
+                videoController.setPlaybackSpeed(speed)
+            },
+            onLike = { videoController.clickLikeButton() },
+            onDislike = { videoController.clickDislikeButton() },
+            onSave = { videoController.clickSaveButton() },
+            onShare = { videoController.clickShareButton() },
+            onCaptions = { videoController.toggleCaptions() },
+            onSettings = { videoController.openQualitySettings() }
+        )
+    }
 }
 
 private fun setFullscreen(activity: Activity, fullscreen: Boolean) {
