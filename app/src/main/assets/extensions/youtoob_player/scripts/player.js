@@ -287,7 +287,7 @@
         /* Seek bar styles */
         .youtoob-seek-container {
             position: absolute;
-            bottom: 16px;
+            bottom: 30px;
             left: 12px;
             right: 12px;
             display: flex;
