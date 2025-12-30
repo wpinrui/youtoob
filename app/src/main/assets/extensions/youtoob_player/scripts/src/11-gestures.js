@@ -270,11 +270,18 @@ function setupGestures(video, overlay) {
         resetTransform(true);
     }, { capture: true, passive: true });
 
-    // Clean up transform on fullscreen change (in case browser handles it)
-    document.addEventListener('fullscreenchange', () => {
+    // Clean up transform AND reset all gesture state on fullscreen change
+    function onFullscreenChange() {
         resetTransform(false);
-    });
-    document.addEventListener('webkitfullscreenchange', () => {
-        resetTransform(false);
-    });
+        // Reset ALL gesture state to start fresh
+        touchStartTime = 0;
+        isDragging = false;
+        dragDirection = null;
+        isPinching = false;
+        initialPinchDistance = 0;
+        cancelLongPress();
+    }
+
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 }
