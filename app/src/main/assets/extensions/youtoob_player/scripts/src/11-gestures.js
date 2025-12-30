@@ -141,14 +141,8 @@ function setupGestures(video, overlay) {
         }
     }
 
-    // Complete fullscreen enter with animation
-    function completeFullscreenEnter() {
-        resetTransform(false);
-        toggleFullscreen();
-    }
-
-    // Complete fullscreen exit with animation
-    function completeFullscreenExit() {
+    // Complete fullscreen gesture (enter or exit)
+    function completeFullscreenGesture() {
         resetTransform(false);
         toggleFullscreen();
     }
@@ -288,11 +282,9 @@ function setupGestures(video, overlay) {
         if (isDragging) {
             // Check if drag was far enough to complete action
             if (dragDirection === 'up' && !isFullscreen() && deltaY < -COMPLETE_THRESHOLD) {
-                // Complete fullscreen enter
-                completeFullscreenEnter();
+                completeFullscreenGesture();
             } else if (dragDirection === 'down' && isFullscreen() && deltaY > COMPLETE_THRESHOLD) {
-                // Complete fullscreen exit
-                completeFullscreenExit();
+                completeFullscreenGesture();
             } else {
                 // Snap back
                 resetTransform(true);
