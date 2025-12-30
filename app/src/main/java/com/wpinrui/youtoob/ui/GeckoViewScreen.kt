@@ -2,14 +2,16 @@ package com.wpinrui.youtoob.ui
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
-import android.view.WindowInsets
-import android.view.WindowInsetsController
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +28,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.getSystemService
 import com.wpinrui.youtoob.gecko.GeckoRuntimeProvider
 import com.wpinrui.youtoob.gecko.GeckoSessionDelegate
+import com.wpinrui.youtoob.gecko.ShareRequest
 import com.wpinrui.youtoob.ui.navigation.NavDestination
 import com.wpinrui.youtoob.utils.PermissionBridge
 import org.mozilla.geckoview.GeckoSession
@@ -132,6 +135,9 @@ fun GeckoViewScreen(
                         injectCss(session)
                     }, SPA_NAVIGATION_DELAY_MS)
                 }
+            },
+            onShareRequest = { request, callback ->
+                launchShareIntent(context, request, callback)
             }
         )
     }
@@ -143,6 +149,7 @@ fun GeckoViewScreen(
             progressDelegate = delegate
             navigationDelegate = delegate
             mediaSessionDelegate = delegate
+            promptDelegate = delegate
         }
     }
 
@@ -172,13 +179,13 @@ fun GeckoViewScreen(
 
 private fun setFullscreen(activity: Activity, fullscreen: Boolean) {
     val window = activity.window
-    val controller = window.insetsController ?: return
+    val controller = WindowCompat.getInsetsController(window, window.decorView)
 
     if (fullscreen) {
-        controller.hide(WindowInsets.Type.systemBars())
-        controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller.hide(WindowInsetsCompat.Type.systemBars())
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     } else {
-        controller.show(WindowInsets.Type.systemBars())
+        controller.show(WindowInsetsCompat.Type.systemBars())
     }
 }
 
@@ -187,5 +194,21 @@ private fun setOrientation(activity: Activity, fullscreen: Boolean) {
         ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
     } else {
         ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    }
+}
+
+private fun launchShareIntent(context: Context, request: ShareRequest, callback: (Boolean) -> Unit) {
+    try {
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, request.uri ?: request.text ?: "")
+            request.title?.let { putExtra(Intent.EXTRA_SUBJECT, it) }
+        }
+
+        val shareIntent = Intent.createChooser(sendIntent, null)
+        context.startActivity(shareIntent)
+        callback(true)
+    } catch (e: Exception) {
+        callback(false)
     }
 }

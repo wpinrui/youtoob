@@ -103,7 +103,17 @@ YouToob wraps YouTube's mobile site in Firefox's GeckoView engine, enabling Fire
 - [ ] GitHub Releases setup
 - [ ] Community guidelines
 
-**Estimated**: 1-2 weeks
+### Phase 8: Native Fullscreen Player 📋
+**Goal**: Replace GeckoView fullscreen with native ExoPlayer
+
+GeckoView has a bug where consecutive fullscreen requests require a tap between them. This phase implements a native Android fullscreen player to bypass this limitation.
+
+- [ ] Integrate NewPipeExtractor for YouTube URL extraction
+- [ ] Create ExoPlayer fullscreen Activity
+- [ ] Implement native controls overlay (matching WebExtension design)
+- [ ] Add WebExtension ↔ Kotlin messaging for fullscreen trigger
+- [ ] Handle quality selection and captions in native player
+- [ ] Sync playback state between GeckoView and ExoPlayer
 
 ## Tech Stack
 
