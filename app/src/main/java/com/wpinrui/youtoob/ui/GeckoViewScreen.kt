@@ -67,6 +67,7 @@ fun GeckoViewScreen(
     var isFullscreen by remember { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(false) }
     var currentSpeed by remember { mutableFloatStateOf(1.0f) }
+    var isOnVideoPage by remember { mutableStateOf(false) }
 
     val audioManager = remember { context.getSystemService<AudioManager>() }
     val audioFocusRequest = remember {
@@ -121,6 +122,9 @@ fun GeckoViewScreen(
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
                 injectCustomStyles(session)
+            },
+            onUrlChange = { url ->
+                isOnVideoPage = url.contains("/watch")
             }
         )
     }
@@ -130,6 +134,7 @@ fun GeckoViewScreen(
             contentDelegate = delegate
             permissionDelegate = delegate
             progressDelegate = delegate
+            navigationDelegate = delegate
             mediaSessionDelegate = delegate
         }
     }
@@ -160,25 +165,27 @@ fun GeckoViewScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        PlayerControlsOverlay(
-            isPlaying = isPlaying,
-            currentSpeed = currentSpeed,
-            onPlayPause = { videoController.togglePlayPause() },
-            onSeekForward = { videoController.seekForward() },
-            onSeekBackward = { videoController.seekBackward() },
-            onPrevious = { /* TODO: Previous video in playlist */ },
-            onNext = { /* TODO: Next video in playlist */ },
-            onSpeedChange = { speed ->
-                currentSpeed = speed
-                videoController.setPlaybackSpeed(speed)
-            },
-            onLike = { videoController.clickLikeButton() },
-            onDislike = { videoController.clickDislikeButton() },
-            onSave = { videoController.clickSaveButton() },
-            onShare = { videoController.clickShareButton() },
-            onCaptions = { videoController.toggleCaptions() },
-            onSettings = { videoController.openQualitySettings() }
-        )
+        if (isOnVideoPage) {
+            PlayerControlsOverlay(
+                isPlaying = isPlaying,
+                currentSpeed = currentSpeed,
+                onPlayPause = { videoController.togglePlayPause() },
+                onSeekForward = { videoController.seekForward() },
+                onSeekBackward = { videoController.seekBackward() },
+                onPrevious = { /* TODO: Previous video in playlist */ },
+                onNext = { /* TODO: Next video in playlist */ },
+                onSpeedChange = { speed ->
+                    currentSpeed = speed
+                    videoController.setPlaybackSpeed(speed)
+                },
+                onLike = { videoController.clickLikeButton() },
+                onDislike = { videoController.clickDislikeButton() },
+                onSave = { videoController.clickSaveButton() },
+                onShare = { videoController.clickShareButton() },
+                onCaptions = { videoController.toggleCaptions() },
+                onSettings = { videoController.openQualitySettings() }
+            )
+        }
     }
 }
 
