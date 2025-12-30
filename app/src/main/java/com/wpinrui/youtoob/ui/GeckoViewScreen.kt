@@ -199,15 +199,9 @@ private fun setOrientation(activity: Activity, fullscreen: Boolean) {
 
 private fun launchShareIntent(context: Context, request: ShareRequest, callback: (Boolean) -> Unit) {
     try {
-        val shareText = buildString {
-            request.title?.let { append(it).append("\n") }
-            request.text?.let { append(it).append("\n") }
-            request.uri?.let { append(it) }
-        }.trim()
-
         val sendIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, shareText)
+            putExtra(Intent.EXTRA_TEXT, request.uri ?: request.text ?: "")
             request.title?.let { putExtra(Intent.EXTRA_SUBJECT, it) }
         }
 
