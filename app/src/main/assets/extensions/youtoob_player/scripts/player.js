@@ -208,7 +208,7 @@
         }
         .youtoob-bottom-bar {
             position: absolute;
-            bottom: 70px;
+            bottom: 50px;
             right: 12px;
             display: flex;
             gap: 6px;
@@ -217,6 +217,9 @@
             transition: opacity 0.2s;
             pointer-events: none;
             z-index: 100001;
+        }
+        #youtoob-controls.fullscreen .youtoob-bottom-bar {
+            bottom: 70px;
         }
         #youtoob-controls.show-controls .youtoob-bottom-bar {
             pointer-events: auto;
@@ -287,7 +290,7 @@
         /* Seek bar styles */
         .youtoob-seek-container {
             position: absolute;
-            bottom: 30px;
+            bottom: 10px;
             left: 12px;
             right: 12px;
             display: flex;
@@ -298,6 +301,9 @@
             transition: opacity 0.2s;
             pointer-events: none;
             z-index: 100001;
+        }
+        #youtoob-controls.fullscreen .youtoob-seek-container {
+            bottom: 30px;
         }
         #youtoob-controls.show-controls .youtoob-seek-container {
             opacity: 1;
@@ -706,8 +712,10 @@
         currentFullscreenHandler = () => {
             if (document.fullscreenElement) {
                 document.fullscreenElement.appendChild(overlay);
+                overlay.classList.add('fullscreen');
             } else {
                 playerContainer.appendChild(overlay);
+                overlay.classList.remove('fullscreen');
             }
             controls.show();
         };
