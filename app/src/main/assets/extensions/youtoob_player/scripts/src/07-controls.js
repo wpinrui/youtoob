@@ -53,6 +53,10 @@ function createDoubleTapHandler(video, indicator, textElement, direction, contro
 
     return function handleTap(e) {
         e.stopPropagation();
+
+        // Ignore if multiple touches (pinch gesture)
+        if (e.touches && e.touches.length >= 2) return;
+
         const now = Date.now();
 
         if (now - lastTap < DOUBLE_TAP_THRESHOLD_MS) {

@@ -63,10 +63,37 @@ function setupGestures(video, overlay) {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-    // Toggle fill mode (object-fit: cover vs contain)
-    function setFillMode(fill) {
+    // Calculate max scale needed to fill the screen
+    function getFillScale() {
+        const videoAspect = video.videoWidth / video.videoHeight;
+        const screenAspect = window.innerWidth / window.innerHeight;
+        if (screenAspect > videoAspect) {
+            return screenAspect / videoAspect;
+        } else {
+            return videoAspect / screenAspect;
+        }
+    }
+
+    // Apply scale during pinch (no transition - follows fingers)
+    function applyPinchScale(scale) {
+        video.style.transition = 'none';
+        video.style.transform = scale === 1 ? '' : `scale(${scale})`;
+        video.style.transformOrigin = 'center center';
+    }
+
+    // Snap to fill or fit with animation
+    function snapToFillMode(fill) {
         isFillMode = fill;
-        video.style.objectFit = fill ? 'cover' : 'contain';
+        video.style.transition = 'transform 0.2s ease-out';
+        if (fill) {
+            const scale = getFillScale();
+            console.log('[YouToob] Snap to FILL - scale:', scale.toFixed(2));
+            video.style.transform = `scale(${scale})`;
+        } else {
+            console.log('[YouToob] Snap to FIT');
+            video.style.transform = '';
+        }
+        video.style.transformOrigin = 'center center';
     }
 
     // Apply progressive transform during drag
@@ -117,36 +144,41 @@ function setupGestures(video, overlay) {
         }
     }
 
+    // Find YouTube's fullscreen button
+    function getYouTubeFullscreenButton() {
+        return document.querySelector('.ytp-fullscreen-button') ||
+            document.querySelector('[aria-label*="ull screen"]') ||
+            document.querySelector('button.fullscreen-icon');
+    }
+
+    // Toggle fullscreen via YouTube's button
+    function toggleFullscreen() {
+        const ytBtn = getYouTubeFullscreenButton();
+        if (ytBtn) {
+            ytBtn.click();
+        } else {
+            const ourFsBtn = document.getElementById('youtoob-fullscreen');
+            if (ourFsBtn) ourFsBtn.click();
+        }
+    }
+
     // Complete fullscreen enter with animation
     function completeFullscreenEnter() {
-        // Must request fullscreen IMMEDIATELY during user gesture - no setTimeout!
         resetTransform(false);
-
-        // Click our own fullscreen button - this goes through the same trusted path
-        // as a manual tap (which the user confirmed works reliably)
-        const ourFsBtn = document.getElementById('youtoob-fullscreen');
-        if (ourFsBtn) {
-            console.log('[YouToob] Clicking our fullscreen button');
-            ourFsBtn.click();
-        }
+        toggleFullscreen();
     }
 
     // Complete fullscreen exit with animation
     function completeFullscreenExit() {
-        // Must exit fullscreen IMMEDIATELY during user gesture - no setTimeout!
         resetTransform(false);
-
-        // Use the same path as the button - click our fullscreen button
-        // which handles the toggle correctly
-        const ourFsBtn = document.getElementById('youtoob-fullscreen');
-        if (ourFsBtn) {
-            console.log('[YouToob] Clicking our fullscreen button to exit');
-            ourFsBtn.click();
-        }
+        toggleFullscreen();
     }
 
-    // Use capture phase on overlay to intercept events before child handlers
-    overlay.addEventListener('touchstart', (e) => {
+    // Attach to document instead of overlay - overlay moves during fullscreen which corrupts touch handling
+    document.addEventListener('touchstart', (e) => {
+        // Only handle touches on our overlay
+        if (!e.target.closest('#youtoob-controls')) return;
+
         // Don't interfere with seek bar or buttons
         if (e.target.closest('.youtoob-seek-bar') ||
             e.target.closest('.youtoob-btn') ||
@@ -157,8 +189,12 @@ function setupGestures(video, overlay) {
 
         // Detect pinch start (2 fingers)
         if (e.touches.length === 2) {
+            console.log('[YouToob] Pinch START detected, distance:', getTouchDistance(e.touches));
             isPinching = true;
             initialPinchDistance = getTouchDistance(e.touches);
+            // Reset any ongoing swipe - 2 fingers = pinch only
+            isDragging = false;
+            dragDirection = null;
             cancelLongPress();
             return;
         }
@@ -171,28 +207,40 @@ function setupGestures(video, overlay) {
 
         // Start long press detection
         startLongPressTimer();
-    }, { capture: true, passive: true });
+    }, { capture: true, passive: false });
 
-    overlay.addEventListener('touchmove', (e) => {
-        // Handle pinch gesture
-        if (isPinching && e.touches.length === 2) {
-            const currentDistance = getTouchDistance(e.touches);
-            const delta = currentDistance - initialPinchDistance;
-
-            // Toggle fill mode when pinch exceeds threshold
-            if (Math.abs(delta) > PINCH_THRESHOLD) {
-                if (delta > 0 && !isFillMode) {
-                    // Pinch out (spread) - fill mode
-                    setFillMode(true);
-                    initialPinchDistance = currentDistance; // Reset to prevent repeated toggles
-                } else if (delta < 0 && isFillMode) {
-                    // Pinch in - fit mode
-                    setFillMode(false);
-                    initialPinchDistance = currentDistance;
-                }
+    document.addEventListener('touchmove', (e) => {
+        // 2 fingers = pinch only, no swipe
+        if (e.touches.length >= 2) {
+            // Start pinch if not already
+            if (!isPinching) {
+                console.log('[YouToob] Pinch detected in touchmove, distance:', getTouchDistance(e.touches));
+                isPinching = true;
+                initialPinchDistance = getTouchDistance(e.touches);
+                isDragging = false;
+                dragDirection = null;
+                cancelLongPress();
             }
+
+            // Handle pinch gesture - progressive zoom following fingers
+            const currentDistance = getTouchDistance(e.touches);
+            const pinchRatio = currentDistance / initialPinchDistance;
+            const fillScale = getFillScale();
+
+            // Calculate current scale based on pinch ratio
+            // Start from current mode (1.0 for fit, fillScale for fill)
+            const baseScale = isFillMode ? fillScale : 1;
+            let currentScale = baseScale * pinchRatio;
+
+            // Clamp scale between 1.0 (fit) and fillScale (fill)
+            currentScale = Math.max(1, Math.min(fillScale, currentScale));
+
+            applyPinchScale(currentScale);
             return;
         }
+
+        // Single finger - but if we were pinching, ignore (finger lifted)
+        if (isPinching) return;
 
         if (touchStartTime === 0) return;
 
@@ -227,13 +275,29 @@ function setupGestures(video, overlay) {
         }
     }, { capture: true, passive: true });
 
-    overlay.addEventListener('touchend', (e) => {
+    document.addEventListener('touchend', (e) => {
         cancelLongPress();
 
-        // Reset pinch state
+        // Reset pinch state - snap to fill or fit based on current scale
         if (isPinching) {
+            // Get current transform to determine which mode to snap to
+            const currentTransform = video.style.transform;
+            const scaleMatch = currentTransform.match(/scale\(([^)]+)\)/);
+            const currentScale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
+            const fillScale = getFillScale();
+            const midpoint = (1 + fillScale) / 2;
+
+            // Snap to fill if past midpoint, otherwise fit
+            const shouldFill = currentScale > midpoint;
+            console.log('[YouToob] Pinch END - scale:', currentScale.toFixed(2),
+                'midpoint:', midpoint.toFixed(2), 'snap to:', shouldFill ? 'FILL' : 'FIT');
+            snapToFillMode(shouldFill);
+
             isPinching = false;
             initialPinchDistance = 0;
+            touchStartTime = 0;
+            isDragging = false;
+            dragDirection = null;
             return;
         }
 
@@ -279,7 +343,7 @@ function setupGestures(video, overlay) {
         }
     }, { capture: true, passive: true });
 
-    overlay.addEventListener('touchcancel', () => {
+    document.addEventListener('touchcancel', () => {
         cancelLongPress();
         touchStartTime = 0;
         isDragging = false;
