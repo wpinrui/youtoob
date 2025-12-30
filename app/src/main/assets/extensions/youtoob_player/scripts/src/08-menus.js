@@ -1,8 +1,42 @@
 // =============================================================================
+// Settings Helpers
+// =============================================================================
+
+function getYoutoobSettings() {
+    // First check window object (set by native injection)
+    if (window._youtoobSettings) {
+        return window._youtoobSettings;
+    }
+    // Fallback to localStorage
+    try {
+        const stored = localStorage.getItem('youtoob_settings');
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (e) {
+        // Ignore parse errors
+    }
+    // Default settings
+    return {
+        defaultQuality: 'auto',
+        defaultSpeed: 1.0,
+        autoplayEnabled: true
+    };
+}
+
+// =============================================================================
 // Auto Quality Setting
 // =============================================================================
 
 function autoSetQuality() {
+    const settings = getYoutoobSettings();
+    const preferredQuality = settings.defaultQuality;
+
+    // If user prefers auto, don't set quality
+    if (preferredQuality === 'auto') {
+        return;
+    }
+
     let attempts = 0;
     const interval = setInterval(() => {
         attempts++;
@@ -23,12 +57,22 @@ function autoSetQuality() {
             return;
         }
 
-        // Find the highest available quality
+        // Find the preferred quality or next best available
         let targetQuality = null;
-        for (const quality of QUALITY_PRIORITY) {
-            if (availableQualities.includes(quality)) {
-                targetQuality = quality;
-                break;
+
+        // First try to get the exact preferred quality
+        if (availableQualities.includes(preferredQuality)) {
+            targetQuality = preferredQuality;
+        } else {
+            // Find the closest lower quality
+            const qualityIndex = QUALITY_PRIORITY.indexOf(preferredQuality);
+            if (qualityIndex !== -1) {
+                for (let i = qualityIndex; i < QUALITY_PRIORITY.length; i++) {
+                    if (availableQualities.includes(QUALITY_PRIORITY[i])) {
+                        targetQuality = QUALITY_PRIORITY[i];
+                        break;
+                    }
+                }
             }
         }
 
@@ -39,6 +83,20 @@ function autoSetQuality() {
             clearInterval(interval);
         }
     }, AUTO_QUALITY_POLL_INTERVAL_MS);
+}
+
+// =============================================================================
+// Auto Speed Setting
+// =============================================================================
+
+function autoSetSpeed(video) {
+    const settings = getYoutoobSettings();
+    const preferredSpeed = settings.defaultSpeed;
+
+    // Only set if different from default
+    if (preferredSpeed !== 1.0 && video) {
+        video.playbackRate = preferredSpeed;
+    }
 }
 
 // =============================================================================
