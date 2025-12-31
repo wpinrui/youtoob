@@ -1,14 +1,17 @@
 package com.wpinrui.youtoob.ui
 
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
+import org.mozilla.geckoview.MediaSession
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -29,11 +32,12 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.getSystemService
 import com.wpinrui.youtoob.data.SettingsRepository
-import com.wpinrui.youtoob.data.ThemeMode
 import com.wpinrui.youtoob.data.YoutoobSettings
 import com.wpinrui.youtoob.gecko.GeckoRuntimeProvider
 import com.wpinrui.youtoob.gecko.GeckoSessionDelegate
+import com.wpinrui.youtoob.gecko.MediaInfo
 import com.wpinrui.youtoob.gecko.ShareRequest
+import com.wpinrui.youtoob.media.AudioPlaybackService
 import com.wpinrui.youtoob.ui.navigation.NavDestination
 import com.wpinrui.youtoob.utils.PermissionBridge
 import com.wpinrui.youtoob.utils.isVideoPageUrl
@@ -174,6 +178,31 @@ fun GeckoViewScreen(
     var currentUrl by remember { mutableStateOf("") }
 
     val audioManager = remember { context.getSystemService<AudioManager>() }
+    var activeMediaSession by remember { mutableStateOf<MediaSession?>(null) }
+    var wasPlayingBeforeFocusLoss by remember { mutableStateOf(false) }
+
+    val audioFocusListener = remember {
+        AudioManager.OnAudioFocusChangeListener { focusChange ->
+            when (focusChange) {
+                AudioManager.AUDIOFOCUS_LOSS,
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                    // Another app took audio focus - pause our playback
+                    activeMediaSession?.let { session ->
+                        wasPlayingBeforeFocusLoss = true
+                        session.pause()
+                    }
+                }
+                AudioManager.AUDIOFOCUS_GAIN -> {
+                    // We regained focus - resume if we were playing before
+                    if (wasPlayingBeforeFocusLoss) {
+                        activeMediaSession?.play()
+                        wasPlayingBeforeFocusLoss = false
+                    }
+                }
+            }
+        }
+    }
+
     val audioFocusRequest = remember {
         AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
             .setAudioAttributes(
@@ -182,6 +211,7 @@ fun GeckoViewScreen(
                     .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
                     .build()
             )
+            .setOnAudioFocusChangeListener(audioFocusListener)
             .build()
     }
 
@@ -217,6 +247,8 @@ fun GeckoViewScreen(
         }
     }
 
+    var isMediaServiceRunning by remember { mutableStateOf(false) }
+
     val delegate = remember {
         GeckoSessionDelegate(
             onFullscreenChange = { fullscreen ->
@@ -226,11 +258,43 @@ fun GeckoViewScreen(
                     setOrientation(it, fullscreen)
                 }
             },
-            onMediaPlaying = {
+            onMediaPlaying = { mediaSession ->
                 audioManager?.requestAudioFocus(audioFocusRequest)
+                activeMediaSession = mediaSession
+                if (!isMediaServiceRunning) {
+                    AudioPlaybackService.start(context)
+                    isMediaServiceRunning = true
+                } else {
+                    // Already running, just update to playing state
+                    AudioPlaybackService.setPlaying(context)
+                }
+            },
+            onMediaPaused = {
+                // Keep service running, just update notification to paused state
+                if (isMediaServiceRunning) {
+                    AudioPlaybackService.setPaused(context)
+                }
             },
             onMediaStopped = {
                 audioManager?.abandonAudioFocusRequest(audioFocusRequest)
+                if (isMediaServiceRunning) {
+                    AudioPlaybackService.stop(context)
+                    isMediaServiceRunning = false
+                }
+            },
+            onMediaMetadata = { metadata ->
+                if (isMediaServiceRunning) {
+                    AudioPlaybackService.updateMetadata(
+                        context,
+                        metadata.title,
+                        metadata.artist
+                    )
+                }
+            },
+            onMediaArtwork = { bitmap ->
+                if (isMediaServiceRunning) {
+                    AudioPlaybackService.updateArtwork(context, bitmap)
+                }
             },
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
@@ -282,12 +346,44 @@ fun GeckoViewScreen(
         }
     }
 
+    // Register broadcast receivers for media controls from notification
+    DisposableEffect(activeMediaSession) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                val mediaSession = activeMediaSession ?: return
+                when (intent?.action) {
+                    AudioPlaybackService.BROADCAST_PLAY -> mediaSession.play()
+                    AudioPlaybackService.BROADCAST_PAUSE -> mediaSession.pause()
+                    AudioPlaybackService.BROADCAST_STOP -> mediaSession.stop()
+                    AudioPlaybackService.BROADCAST_NEXT -> mediaSession.nextTrack()
+                    AudioPlaybackService.BROADCAST_PREVIOUS -> mediaSession.previousTrack()
+                }
+            }
+        }
+
+        val filter = IntentFilter().apply {
+            addAction(AudioPlaybackService.BROADCAST_PLAY)
+            addAction(AudioPlaybackService.BROADCAST_PAUSE)
+            addAction(AudioPlaybackService.BROADCAST_STOP)
+            addAction(AudioPlaybackService.BROADCAST_NEXT)
+            addAction(AudioPlaybackService.BROADCAST_PREVIOUS)
+        }
+        context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+
+        onDispose {
+            context.unregisterReceiver(receiver)
+        }
+    }
+
     DisposableEffect(Unit) {
         session.open(runtime)
         session.loadUri(requireNotNull(NavDestination.HOME.youtubeUrl))
         onSessionReady(session)
         onDispose {
             session.close()
+            if (isMediaServiceRunning) {
+                AudioPlaybackService.stop(context)
+            }
         }
     }
 

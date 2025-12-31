@@ -9,6 +9,10 @@
     window._youtoobContentScriptLoaded = true;
 
     const SPA_NAVIGATION_DELAY_MS = 500;
+    const VISIBILITY_CHECK_DELAY_MS = 300;
+
+    // Track the video element we last injected for
+    let lastVideoElement = null;
 
     // Only run on watch pages
     function shouldRun() {
@@ -27,6 +31,27 @@
         script.id = 'youtoob-player-script';
         script.src = browser.runtime.getURL('scripts/player.js');
         (document.head || document.documentElement).appendChild(script);
+
+        // Track the current video element
+        lastVideoElement = document.querySelector('video');
+    }
+
+    // Check if player controls need re-injection (video element changed or is stale)
+    function checkVideoHealth() {
+        const currentVideo = document.querySelector('video');
+        if (!currentVideo) return false;
+
+        // Video element was replaced
+        if (lastVideoElement && lastVideoElement !== currentVideo) {
+            return true;
+        }
+
+        // Video is in stale state (no duration means it's not properly loaded)
+        if (!currentVideo.duration || isNaN(currentVideo.duration)) {
+            return true;
+        }
+
+        return false;
     }
 
     // Inject on load
@@ -47,4 +72,16 @@
     });
 
     observer.observe(document.body, { subtree: true, childList: true });
+
+    // Re-inject when returning from background if video became stale
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            // Small delay to let YouTube restore the video
+            setTimeout(() => {
+                if (checkVideoHealth()) {
+                    injectPlayerScript();
+                }
+            }, VISIBILITY_CHECK_DELAY_MS);
+        }
+    });
 })();

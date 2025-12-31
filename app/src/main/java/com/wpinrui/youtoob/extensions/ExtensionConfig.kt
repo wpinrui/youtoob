@@ -29,6 +29,12 @@ enum class BundledExtension(
         displayName = "YouToob Player Controls",
         folderName = "youtoob_player",
         defaultEnabled = true
+    ),
+    VIDEO_BG_PLAY(
+        id = "video-bg-play@timdream.org",
+        displayName = "Video Background Play Fix",
+        folderName = "video_bg_play",
+        defaultEnabled = true
     );
 
     val builtInUri: String

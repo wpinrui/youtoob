@@ -1,5 +1,6 @@
 package com.wpinrui.youtoob.gecko
 
+import android.graphics.Bitmap
 import org.mozilla.geckoview.AllowOrDeny
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoResult
@@ -7,15 +8,20 @@ import org.mozilla.geckoview.MediaSession
 import com.wpinrui.youtoob.utils.PermissionBridge
 
 data class ShareRequest(val title: String?, val text: String?, val uri: String?)
+data class MediaInfo(val title: String?, val artist: String?)
 
 private const val YOUTOOB_SCHEME = "youtoob"
 private const val GOBACK_ACTION = "goback"
 private const val SETTINGS_ACTION = "settings"
+private const val ARTWORK_BITMAP_SIZE = 256
 
 class GeckoSessionDelegate(
     private val onFullscreenChange: (Boolean) -> Unit,
-    private val onMediaPlaying: () -> Unit,
+    private val onMediaPlaying: (MediaSession) -> Unit,
+    private val onMediaPaused: () -> Unit = {},
     private val onMediaStopped: () -> Unit,
+    private val onMediaMetadata: (MediaInfo) -> Unit = {},
+    private val onMediaArtwork: (Bitmap) -> Unit = {},
     private val permissionBridge: PermissionBridge,
     private val onPageLoaded: (GeckoSession) -> Unit = {},
     private val onUrlChange: (String, GeckoSession) -> Unit = { _, _ -> },
@@ -79,7 +85,7 @@ class GeckoSessionDelegate(
 
     // MediaSessionDelegate - Handle media playback state
     override fun onActivated(session: GeckoSession, mediaSession: MediaSession) {
-        onMediaPlaying()
+        onMediaPlaying(mediaSession)
     }
 
     override fun onDeactivated(session: GeckoSession, mediaSession: MediaSession) {
@@ -87,15 +93,28 @@ class GeckoSessionDelegate(
     }
 
     override fun onPlay(session: GeckoSession, mediaSession: MediaSession) {
-        onMediaPlaying()
+        onMediaPlaying(mediaSession)
     }
 
     override fun onPause(session: GeckoSession, mediaSession: MediaSession) {
-        onMediaStopped()
+        onMediaPaused()
     }
 
     override fun onStop(session: GeckoSession, mediaSession: MediaSession) {
         onMediaStopped()
+    }
+
+    override fun onMetadata(
+        session: GeckoSession,
+        mediaSession: MediaSession,
+        metadata: MediaSession.Metadata
+    ) {
+        onMediaMetadata(MediaInfo(metadata.title, metadata.artist))
+
+        // Load artwork bitmap asynchronously
+        metadata.artwork?.getBitmap(ARTWORK_BITMAP_SIZE)?.accept({ bitmap ->
+            bitmap?.let { onMediaArtwork(it) }
+        }, { /* Ignore errors */ })
     }
 
     // ProgressDelegate - Detect page loads for CSS injection
