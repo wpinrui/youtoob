@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
-import android.os.Build
 import android.os.IBinder
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
@@ -60,13 +59,13 @@ class AudioPlaybackService : Service() {
             }
             ACTION_PLAY -> {
                 isPlaying = true
-                sendBroadcast(Intent(BROADCAST_PLAY))
+                sendExplicitBroadcast(BROADCAST_PLAY)
                 updatePlaybackState()
                 updateNotification()
             }
             ACTION_PAUSE -> {
                 isPlaying = false
-                sendBroadcast(Intent(BROADCAST_PAUSE))
+                sendExplicitBroadcast(BROADCAST_PAUSE)
                 updatePlaybackState()
                 updateNotification()
             }
@@ -83,13 +82,13 @@ class AudioPlaybackService : Service() {
                 updateNotification()
             }
             ACTION_NEXT -> {
-                sendBroadcast(Intent(BROADCAST_NEXT))
+                sendExplicitBroadcast(BROADCAST_NEXT)
             }
             ACTION_PREVIOUS -> {
-                sendBroadcast(Intent(BROADCAST_PREVIOUS))
+                sendExplicitBroadcast(BROADCAST_PREVIOUS)
             }
             ACTION_STOP -> {
-                sendBroadcast(Intent(BROADCAST_STOP))
+                sendExplicitBroadcast(BROADCAST_STOP)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
@@ -102,6 +101,14 @@ class AudioPlaybackService : Service() {
     override fun onDestroy() {
         mediaSession.release()
         super.onDestroy()
+    }
+
+    private fun sendExplicitBroadcast(action: String) {
+        sendBroadcast(Intent(action).setPackage(packageName))
+    }
+
+    private fun sendExplicitBroadcast(action: String, extras: Intent.() -> Unit) {
+        sendBroadcast(Intent(action).apply(extras).setPackage(packageName))
     }
 
     private fun createNotificationChannel() {
@@ -121,34 +128,34 @@ class AudioPlaybackService : Service() {
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
                     isPlaying = true
-                    sendBroadcast(Intent(BROADCAST_PLAY))
+                    sendExplicitBroadcast(BROADCAST_PLAY)
                     updatePlaybackState()
                     updateNotification()
                 }
 
                 override fun onPause() {
                     isPlaying = false
-                    sendBroadcast(Intent(BROADCAST_PAUSE))
+                    sendExplicitBroadcast(BROADCAST_PAUSE)
                     updatePlaybackState()
                     updateNotification()
                 }
 
                 override fun onStop() {
-                    sendBroadcast(Intent(BROADCAST_STOP))
+                    sendExplicitBroadcast(BROADCAST_STOP)
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                 }
 
                 override fun onSkipToNext() {
-                    sendBroadcast(Intent(BROADCAST_NEXT))
+                    sendExplicitBroadcast(BROADCAST_NEXT)
                 }
 
                 override fun onSkipToPrevious() {
-                    sendBroadcast(Intent(BROADCAST_PREVIOUS))
+                    sendExplicitBroadcast(BROADCAST_PREVIOUS)
                 }
 
                 override fun onSeekTo(pos: Long) {
-                    sendBroadcast(Intent(BROADCAST_SEEK).putExtra(EXTRA_POSITION, pos))
+                    sendExplicitBroadcast(BROADCAST_SEEK) { putExtra(EXTRA_POSITION, pos) }
                 }
             })
             isActive = true
@@ -193,11 +200,7 @@ class AudioPlaybackService : Service() {
 
     private fun startForegroundService() {
         val notification = buildNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
-        }
+        startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
     }
 
     private fun updateNotification() {
