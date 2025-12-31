@@ -171,7 +171,8 @@ fun GeckoViewScreen(
     navigateToUrl: String? = null,
     onFullscreenChange: (Boolean) -> Unit = {},
     onUrlChange: (String) -> Unit = {},
-    onSessionReady: (GeckoSession) -> Unit = {}
+    onSessionReady: (GeckoSession) -> Unit = {},
+    onPipRequest: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -331,7 +332,8 @@ fun GeckoViewScreen(
             },
             onSettingsRequest = {
                 context.startActivity(Intent(context, SettingsActivity::class.java))
-            }
+            },
+            onPipRequest = onPipRequest
         )
     }
 

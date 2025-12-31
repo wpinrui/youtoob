@@ -174,16 +174,16 @@ function setupGestures(video, overlay) {
         toggleFullscreen();
     }
 
-    // Navigate back (for swipe down in portrait)
-    // Uses custom URL scheme to trigger native GeckoSession.goBack() instead of JS history.back()
-    // This avoids issues with YouTube's SPA intercepting history.back() calls
+    // Enter Picture-in-Picture mode (for swipe down in portrait)
+    // Uses custom URL scheme to trigger Android PiP mode via MainActivity
+    // Video continues playing in floating window; tapping returns to full app
     // Uses window flag to prevent multiple triggers across script instances
-    function navigateBack() {
-        if (window._youtoobNavigatingBack) return;
-        window._youtoobNavigatingBack = true;
+    function enterPipMode() {
+        if (window._youtoobEnteringPip) return;
+        window._youtoobEnteringPip = true;
         resetTransform(false);
-        location.href = 'youtoob://goback';
-        setTimeout(() => { window._youtoobNavigatingBack = false; }, NAVIGATE_BACK_DEBOUNCE_MS);
+        location.href = 'youtoob://pip';
+        setTimeout(() => { window._youtoobEnteringPip = false; }, NAVIGATE_BACK_DEBOUNCE_MS);
     }
 
     // Attach to document instead of overlay - overlay moves during fullscreen which corrupts touch handling
@@ -319,8 +319,8 @@ function setupGestures(video, overlay) {
                 // Portrait: swipe up → enter fullscreen
                 completeFullscreenGesture();
             } else if (dragDirection === 'down' && !isFullscreen() && deltaY > COMPLETE_THRESHOLD) {
-                // Portrait: swipe down → go back
-                navigateBack();
+                // Portrait: swipe down → enter PiP mode
+                enterPipMode();
             } else if (dragDirection === 'down' && isFullscreen() && deltaY > COMPLETE_THRESHOLD) {
                 // Fullscreen: swipe down → exit fullscreen
                 completeFullscreenGesture();

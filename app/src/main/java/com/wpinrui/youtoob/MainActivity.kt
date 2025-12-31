@@ -1,8 +1,11 @@
 package com.wpinrui.youtoob
 
+import android.app.PictureInPictureParams
 import android.content.Intent
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
+import android.util.Rational
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.activity.compose.BackHandler
@@ -29,10 +32,29 @@ import org.mozilla.geckoview.GeckoSession
 class MainActivity : ComponentActivity() {
     // Triggers recomposition when configuration changes
     private val configVersion = mutableIntStateOf(0)
+    private val isInPipMode = mutableStateOf(false)
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         configVersion.intValue++
+    }
+
+    fun enterPipMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val aspectRatio = Rational(16, 9)
+            val params = PictureInPictureParams.Builder()
+                .setAspectRatio(aspectRatio)
+                .build()
+            enterPictureInPictureMode(params)
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        isInPipMode.value = isInPictureInPictureMode
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,7 +76,7 @@ class MainActivity : ComponentActivity() {
                 val shouldShowNav = !isFullscreen && !isVideoPage
 
                 BackHandler(enabled = isVideoPage) {
-                    geckoSession?.goBack()
+                    enterPipMode()
                 }
 
                 val backgroundColor = MaterialTheme.colorScheme.background
@@ -91,7 +113,8 @@ class MainActivity : ComponentActivity() {
                         },
                         onSessionReady = { session ->
                             geckoSession = session
-                        }
+                        },
+                        onPipRequest = { enterPipMode() }
                     )
                 }
             }
