@@ -179,6 +179,31 @@ fun GeckoViewScreen(
     var currentUrl by remember { mutableStateOf("") }
 
     val audioManager = remember { context.getSystemService<AudioManager>() }
+    var activeMediaSession by remember { mutableStateOf<MediaSession?>(null) }
+    var wasPlayingBeforeFocusLoss by remember { mutableStateOf(false) }
+
+    val audioFocusListener = remember {
+        AudioManager.OnAudioFocusChangeListener { focusChange ->
+            when (focusChange) {
+                AudioManager.AUDIOFOCUS_LOSS,
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                    // Another app took audio focus - pause our playback
+                    activeMediaSession?.let { session ->
+                        wasPlayingBeforeFocusLoss = true
+                        session.pause()
+                    }
+                }
+                AudioManager.AUDIOFOCUS_GAIN -> {
+                    // We regained focus - resume if we were playing before
+                    if (wasPlayingBeforeFocusLoss) {
+                        activeMediaSession?.play()
+                        wasPlayingBeforeFocusLoss = false
+                    }
+                }
+            }
+        }
+    }
+
     val audioFocusRequest = remember {
         AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
             .setAudioAttributes(
@@ -187,6 +212,7 @@ fun GeckoViewScreen(
                     .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
                     .build()
             )
+            .setOnAudioFocusChangeListener(audioFocusListener)
             .build()
     }
 
@@ -223,7 +249,6 @@ fun GeckoViewScreen(
     }
 
     var isMediaServiceRunning by remember { mutableStateOf(false) }
-    var activeMediaSession by remember { mutableStateOf<MediaSession?>(null) }
 
     val delegate = remember {
         GeckoSessionDelegate(
