@@ -32,7 +32,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.getSystemService
 import com.wpinrui.youtoob.data.SettingsRepository
-import com.wpinrui.youtoob.data.ThemeMode
 import com.wpinrui.youtoob.data.YoutoobSettings
 import com.wpinrui.youtoob.gecko.GeckoRuntimeProvider
 import com.wpinrui.youtoob.gecko.GeckoSessionDelegate

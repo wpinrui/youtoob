@@ -24,8 +24,8 @@ class AudioPlaybackService : Service() {
     private lateinit var mediaSession: MediaSessionCompat
     private lateinit var notificationManager: NotificationManager
 
-    private var currentTitle: String = "Playing"
-    private var currentArtist: String = "YouToob"
+    private var currentTitle: String = DEFAULT_TITLE
+    private var currentArtist: String = DEFAULT_ARTIST
     private var currentArtwork: Bitmap? = null
     private var isPlaying: Boolean = true
 
@@ -39,8 +39,8 @@ class AudioPlaybackService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
-                currentTitle = intent.getStringExtra(EXTRA_TITLE) ?: "Playing"
-                currentArtist = intent.getStringExtra(EXTRA_ARTIST) ?: "YouToob"
+                currentTitle = intent.getStringExtra(EXTRA_TITLE) ?: DEFAULT_TITLE
+                currentArtist = intent.getStringExtra(EXTRA_ARTIST) ?: DEFAULT_ARTIST
                 isPlaying = true
                 startForegroundService()
             }
@@ -283,6 +283,8 @@ class AudioPlaybackService : Service() {
     companion object {
         private const val CHANNEL_ID = "youtoob_playback"
         private const val NOTIFICATION_ID = 1
+        private const val DEFAULT_TITLE = "Playing"
+        private const val DEFAULT_ARTIST = "YouToob"
 
         const val ACTION_START = "com.wpinrui.youtoob.START"
         const val ACTION_UPDATE_METADATA = "com.wpinrui.youtoob.UPDATE_METADATA"
