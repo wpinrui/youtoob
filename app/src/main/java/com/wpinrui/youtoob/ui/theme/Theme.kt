@@ -8,9 +8,14 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.wpinrui.youtoob.data.SettingsRepository
 import com.wpinrui.youtoob.data.ThemeMode
+import com.wpinrui.youtoob.data.YoutoobSettings
 
 private val PureBlack = Color(0xFF000000)
 
@@ -59,4 +64,14 @@ fun YouToobTheme(
         typography = Typography,
         content = content
     )
+}
+
+@Composable
+fun YouToobThemeWithSettings(
+    content: @Composable () -> Unit
+) {
+    val context = LocalContext.current
+    val settingsRepository = remember { SettingsRepository(context) }
+    val settings by settingsRepository.settings.collectAsState(initial = YoutoobSettings())
+    YouToobTheme(themeMode = settings.themeMode, content = content)
 }

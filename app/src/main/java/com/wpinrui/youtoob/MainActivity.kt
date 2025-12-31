@@ -11,20 +11,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import com.wpinrui.youtoob.data.SettingsRepository
-import com.wpinrui.youtoob.data.YoutoobSettings
 import com.wpinrui.youtoob.ui.DownloadsActivity
 import com.wpinrui.youtoob.ui.GeckoViewScreen
 import com.wpinrui.youtoob.ui.components.YoutoobBottomNav
 import com.wpinrui.youtoob.ui.navigation.NavDestination
-import com.wpinrui.youtoob.ui.theme.YouToobTheme
+import com.wpinrui.youtoob.ui.theme.YouToobThemeWithSettings
 import com.wpinrui.youtoob.utils.isVideoPageUrl
 import org.mozilla.geckoview.GeckoSession
 
@@ -33,11 +29,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val context = LocalContext.current
-            val settingsRepository = remember { SettingsRepository(context) }
-            val settings by settingsRepository.settings.collectAsState(initial = YoutoobSettings())
-
-            YouToobTheme(themeMode = settings.themeMode) {
+            YouToobThemeWithSettings {
                 var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
                 var navigateToUrl by remember { mutableStateOf<String?>(null) }
                 var isFullscreen by remember { mutableStateOf(false) }

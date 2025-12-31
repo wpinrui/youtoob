@@ -21,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -194,8 +195,7 @@ fun GeckoViewScreen(
 
     // Track system dark mode for theme-aware CSS injection
     val systemIsDark = isSystemInDarkTheme()
-    val systemIsDarkRef = remember { mutableStateOf(true) }
-    systemIsDarkRef.value = systemIsDark
+    val currentSystemIsDark by rememberUpdatedState(systemIsDark)
 
     val permissionBridge = remember { PermissionBridge() }
     var pendingPermissionCallback by remember { mutableStateOf<((Map<String, Boolean>) -> Unit)?>(null) }
@@ -238,7 +238,7 @@ fun GeckoViewScreen(
             },
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
-                val isDark = cachedSettings.themeMode.isDark(systemIsDarkRef.value)
+                val isDark = cachedSettings.themeMode.isDark(currentSystemIsDark)
                 injectCss(session, currentUrl.isVideoPageUrl(), isDark)
                 if (currentUrl.isVideoPageUrl()) {
                     injectSettings(session, cachedSettings)
@@ -252,7 +252,7 @@ fun GeckoViewScreen(
                 // Re-inject CSS on SPA navigation when video page state changes
                 if (isVideoPage != wasVideoPage) {
                     Handler(Looper.getMainLooper()).postDelayed({
-                        val isDark = cachedSettings.themeMode.isDark(systemIsDarkRef.value)
+                        val isDark = cachedSettings.themeMode.isDark(currentSystemIsDark)
                         injectCss(session, isVideoPage, isDark)
                     }, SPA_NAVIGATION_DELAY_MS)
                 }
