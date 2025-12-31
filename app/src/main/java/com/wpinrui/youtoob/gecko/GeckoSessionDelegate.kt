@@ -7,6 +7,7 @@ import org.mozilla.geckoview.MediaSession
 import com.wpinrui.youtoob.utils.PermissionBridge
 
 data class ShareRequest(val title: String?, val text: String?, val uri: String?)
+data class MediaInfo(val title: String?, val artist: String?)
 
 private const val YOUTOOB_SCHEME = "youtoob"
 private const val GOBACK_ACTION = "goback"
@@ -16,6 +17,7 @@ class GeckoSessionDelegate(
     private val onFullscreenChange: (Boolean) -> Unit,
     private val onMediaPlaying: () -> Unit,
     private val onMediaStopped: () -> Unit,
+    private val onMediaMetadata: (MediaInfo) -> Unit = {},
     private val permissionBridge: PermissionBridge,
     private val onPageLoaded: (GeckoSession) -> Unit = {},
     private val onUrlChange: (String, GeckoSession) -> Unit = { _, _ -> },
@@ -96,6 +98,14 @@ class GeckoSessionDelegate(
 
     override fun onStop(session: GeckoSession, mediaSession: MediaSession) {
         onMediaStopped()
+    }
+
+    override fun onMetadata(
+        session: GeckoSession,
+        mediaSession: MediaSession,
+        metadata: MediaSession.Metadata
+    ) {
+        onMediaMetadata(MediaInfo(metadata.title, metadata.artist))
     }
 
     // ProgressDelegate - Detect page loads for CSS injection

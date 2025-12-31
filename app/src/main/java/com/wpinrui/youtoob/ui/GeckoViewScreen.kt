@@ -33,7 +33,9 @@ import com.wpinrui.youtoob.data.ThemeMode
 import com.wpinrui.youtoob.data.YoutoobSettings
 import com.wpinrui.youtoob.gecko.GeckoRuntimeProvider
 import com.wpinrui.youtoob.gecko.GeckoSessionDelegate
+import com.wpinrui.youtoob.gecko.MediaInfo
 import com.wpinrui.youtoob.gecko.ShareRequest
+import com.wpinrui.youtoob.media.AudioPlaybackService
 import com.wpinrui.youtoob.ui.navigation.NavDestination
 import com.wpinrui.youtoob.utils.PermissionBridge
 import com.wpinrui.youtoob.utils.isVideoPageUrl
@@ -217,6 +219,8 @@ fun GeckoViewScreen(
         }
     }
 
+    var isMediaServiceRunning by remember { mutableStateOf(false) }
+
     val delegate = remember {
         GeckoSessionDelegate(
             onFullscreenChange = { fullscreen ->
@@ -228,9 +232,22 @@ fun GeckoViewScreen(
             },
             onMediaPlaying = {
                 audioManager?.requestAudioFocus(audioFocusRequest)
+                if (!isMediaServiceRunning) {
+                    AudioPlaybackService.start(context)
+                    isMediaServiceRunning = true
+                }
             },
             onMediaStopped = {
                 audioManager?.abandonAudioFocusRequest(audioFocusRequest)
+                if (isMediaServiceRunning) {
+                    AudioPlaybackService.stop(context)
+                    isMediaServiceRunning = false
+                }
+            },
+            onMediaMetadata = { metadata ->
+                if (isMediaServiceRunning) {
+                    AudioPlaybackService.updateMetadata(context, metadata.title, metadata.artist)
+                }
             },
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
@@ -288,6 +305,9 @@ fun GeckoViewScreen(
         onSessionReady(session)
         onDispose {
             session.close()
+            if (isMediaServiceRunning) {
+                AudioPlaybackService.stop(context)
+            }
         }
     }
 
