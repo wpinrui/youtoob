@@ -13,6 +13,7 @@ data class MediaInfo(val title: String?, val artist: String?)
 private const val YOUTOOB_SCHEME = "youtoob"
 private const val GOBACK_ACTION = "goback"
 private const val SETTINGS_ACTION = "settings"
+private const val ARTWORK_BITMAP_SIZE = 256
 
 class GeckoSessionDelegate(
     private val onFullscreenChange: (Boolean) -> Unit,
@@ -111,7 +112,7 @@ class GeckoSessionDelegate(
         onMediaMetadata(MediaInfo(metadata.title, metadata.artist))
 
         // Load artwork bitmap asynchronously
-        metadata.artwork?.getBitmap(256)?.accept({ bitmap ->
+        metadata.artwork?.getBitmap(ARTWORK_BITMAP_SIZE)?.accept({ bitmap ->
             bitmap?.let { onMediaArtwork(it) }
         }, { /* Ignore errors */ })
     }
