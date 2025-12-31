@@ -350,13 +350,13 @@ fun GeckoViewScreen(
     DisposableEffect(activeMediaSession) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context?, intent: Intent?) {
-                val session = activeMediaSession ?: return
+                val mediaSession = activeMediaSession ?: return
                 when (intent?.action) {
-                    AudioPlaybackService.BROADCAST_PLAY -> session.play()
-                    AudioPlaybackService.BROADCAST_PAUSE -> session.pause()
-                    AudioPlaybackService.BROADCAST_STOP -> session.stop()
-                    AudioPlaybackService.BROADCAST_NEXT -> session.nextTrack()
-                    AudioPlaybackService.BROADCAST_PREVIOUS -> session.previousTrack()
+                    AudioPlaybackService.BROADCAST_PLAY -> mediaSession.play()
+                    AudioPlaybackService.BROADCAST_PAUSE -> mediaSession.pause()
+                    AudioPlaybackService.BROADCAST_STOP -> mediaSession.stop()
+                    AudioPlaybackService.BROADCAST_NEXT -> mediaSession.nextTrack()
+                    AudioPlaybackService.BROADCAST_PREVIOUS -> mediaSession.previousTrack()
                 }
             }
         }
