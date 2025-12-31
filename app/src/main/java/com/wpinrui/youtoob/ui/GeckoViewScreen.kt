@@ -44,6 +44,9 @@ private const val SPA_NAVIGATION_DELAY_MS = 1000L
 
 private fun getBaseCss(isDark: Boolean): String {
     val backgroundColor = if (isDark) "#000" else "#fff"
+    val textColor = if (isDark) "#fff" else "#0f0f0f"
+    val secondaryTextColor = if (isDark) "#aaa" else "#606060"
+
     return """
         /* Hide YouTube bottom navigation */
         ytm-pivot-bar-renderer,
@@ -57,6 +60,29 @@ private fun getBaseCss(isDark: Boolean): String {
         /* Theme-aware background */
         html, body, ytm-app, ytm-browse, ytm-watch {
             background-color: $backgroundColor !important;
+        }
+
+        /* Theme-aware text colors for light mode */
+        ytm-rich-item-renderer,
+        ytm-video-with-context-renderer,
+        ytm-compact-video-renderer,
+        ytm-reel-item-renderer,
+        .media-item-headline,
+        .media-item-metadata,
+        .video-title,
+        .channel-name,
+        h3, h4,
+        ytm-badge-and-byline-renderer,
+        .yt-core-attributed-string {
+            color: $textColor !important;
+        }
+
+        /* Secondary text (views, time, etc) */
+        .media-item-byline,
+        .ytm-badge-and-byline-renderer span,
+        .view-count,
+        .published-time {
+            color: $secondaryTextColor !important;
         }
     """.trimIndent()
 }
