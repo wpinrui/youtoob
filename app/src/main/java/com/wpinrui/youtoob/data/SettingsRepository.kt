@@ -12,13 +12,13 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "youtoob_settings")
 
-enum class VideoQuality(val label: String, val value: String) {
-    AUTO("Auto", "auto"),
-    P480("480p", "480"),
-    P720("720p", "720"),
-    P1080("1080p", "1080"),
-    P1440("1440p", "1440"),
-    P4K("4K", "2160");
+enum class VideoQuality(val label: String, val value: String, val youtubeQuality: String) {
+    AUTO("Auto", "auto", "auto"),
+    P480("480p", "480", "large"),
+    P720("720p", "720", "hd720"),
+    P1080("1080p", "1080", "hd1080"),
+    P1440("1440p", "1440", "hd1440"),
+    P4K("4K", "2160", "hd2160");
 
     companion object {
         fun fromValue(value: String): VideoQuality =

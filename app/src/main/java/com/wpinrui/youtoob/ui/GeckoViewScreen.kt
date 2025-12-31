@@ -141,20 +141,10 @@ private fun injectCss(session: GeckoSession, isVideoPage: Boolean, isDark: Boole
 }
 
 private fun injectSettings(session: GeckoSession, settings: YoutoobSettings) {
-    val qualityMap = mapOf(
-        "auto" to "auto",
-        "480" to "large",
-        "720" to "hd720",
-        "1080" to "hd1080",
-        "1440" to "hd1440",
-        "2160" to "hd2160"
-    )
-    val ytQuality = qualityMap[settings.defaultQuality.value] ?: "auto"
-
     val settingsScript = """
         (function() {
             window._youtoobSettings = {
-                defaultQuality: '$ytQuality',
+                defaultQuality: '${settings.defaultQuality.youtubeQuality}',
                 defaultSpeed: ${settings.defaultSpeed.value},
                 autoplayEnabled: ${settings.autoplayEnabled}
             };
