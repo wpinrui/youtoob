@@ -9,13 +9,17 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.wpinrui.youtoob.data.SettingsRepository
+import com.wpinrui.youtoob.data.YoutoobSettings
 import com.wpinrui.youtoob.ui.DownloadsActivity
 import com.wpinrui.youtoob.ui.GeckoViewScreen
 import com.wpinrui.youtoob.ui.components.YoutoobBottomNav
@@ -29,7 +33,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            YouToobTheme {
+            val context = LocalContext.current
+            val settingsRepository = remember { SettingsRepository(context) }
+            val settings by settingsRepository.settings.collectAsState(initial = YoutoobSettings())
+
+            YouToobTheme(themeMode = settings.themeMode) {
                 var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
                 var navigateToUrl by remember { mutableStateOf<String?>(null) }
                 var isFullscreen by remember { mutableStateOf(false) }
@@ -43,9 +51,11 @@ class MainActivity : ComponentActivity() {
                     geckoSession?.goBack()
                 }
 
+                val backgroundColor = MaterialTheme.colorScheme.background
+
                 Scaffold(
-                    modifier = Modifier.fillMaxSize().background(Color.Black),
-                    containerColor = Color.Black,
+                    modifier = Modifier.fillMaxSize().background(backgroundColor),
+                    containerColor = backgroundColor,
                     bottomBar = {
                         YoutoobBottomNav(
                             currentDestination = currentDestination,

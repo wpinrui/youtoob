@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.wpinrui.youtoob.data.PlaybackSpeed
 import com.wpinrui.youtoob.data.SettingsRepository
+import com.wpinrui.youtoob.data.ThemeMode
 import com.wpinrui.youtoob.data.VideoQuality
 import com.wpinrui.youtoob.data.YoutoobSettings
 import com.wpinrui.youtoob.ui.theme.YouToobTheme
@@ -48,11 +49,12 @@ class SettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            YouToobTheme(darkTheme = true, dynamicColor = false) {
-                val context = LocalContext.current
-                val repository = remember { SettingsRepository(context) }
-                val settings by repository.settings.collectAsState(initial = YoutoobSettings())
-                val scope = rememberCoroutineScope()
+            val context = LocalContext.current
+            val repository = remember { SettingsRepository(context) }
+            val settings by repository.settings.collectAsState(initial = YoutoobSettings())
+            val scope = rememberCoroutineScope()
+
+            YouToobTheme(themeMode = settings.themeMode) {
 
                 Scaffold(
                     topBar = {
@@ -76,6 +78,23 @@ class SettingsActivity : ComponentActivity() {
                             .padding(innerPadding)
                             .padding(16.dp)
                     ) {
+                        SettingsHeader("Appearance")
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        DropdownSetting(
+                            title = "Theme",
+                            subtitle = settings.themeMode.label,
+                            options = ThemeMode.entries.map { it.label },
+                            selectedIndex = ThemeMode.entries.indexOf(settings.themeMode),
+                            onSelect = { index ->
+                                scope.launch {
+                                    repository.setThemeMode(ThemeMode.entries[index])
+                                }
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         SettingsHeader("Playback")
                         Spacer(modifier = Modifier.height(8.dp))
 

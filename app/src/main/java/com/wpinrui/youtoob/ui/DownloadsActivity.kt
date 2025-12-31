@@ -16,8 +16,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.wpinrui.youtoob.data.SettingsRepository
+import com.wpinrui.youtoob.data.YoutoobSettings
 import com.wpinrui.youtoob.ui.theme.YouToobTheme
 
 class DownloadsActivity : ComponentActivity() {
@@ -26,7 +32,11 @@ class DownloadsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            YouToobTheme {
+            val context = LocalContext.current
+            val settingsRepository = remember { SettingsRepository(context) }
+            val settings by settingsRepository.settings.collectAsState(initial = YoutoobSettings())
+
+            YouToobTheme(themeMode = settings.themeMode) {
                 Scaffold(
                     topBar = {
                         TopAppBar(

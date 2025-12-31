@@ -5,6 +5,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -29,10 +30,11 @@ fun YoutoobBottomNav(
         modifier = modifier
     ) {
         NavigationBar(
-            containerColor = Color.Black,
-            contentColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
             windowInsets = WindowInsets(0.dp)
         ) {
+            val contentColor = MaterialTheme.colorScheme.onSurface
             NavDestination.entries.forEach { destination ->
                 val isSelected = currentDestination == destination
                 NavigationBarItem(
@@ -46,10 +48,10 @@ fun YoutoobBottomNav(
                     selected = isSelected,
                     onClick = { onNavigate(destination) },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.White,
-                        selectedTextColor = Color.White,
-                        unselectedIconColor = Color.White.copy(alpha = 0.7f),
-                        unselectedTextColor = Color.White.copy(alpha = 0.7f),
+                        selectedIconColor = contentColor,
+                        selectedTextColor = contentColor,
+                        unselectedIconColor = contentColor.copy(alpha = 0.7f),
+                        unselectedTextColor = contentColor.copy(alpha = 0.7f),
                         indicatorColor = Color.Transparent
                     )
                 )

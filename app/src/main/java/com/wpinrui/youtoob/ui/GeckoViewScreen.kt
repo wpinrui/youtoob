@@ -24,9 +24,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.getSystemService
 import com.wpinrui.youtoob.data.SettingsRepository
+import com.wpinrui.youtoob.data.ThemeMode
 import com.wpinrui.youtoob.data.YoutoobSettings
 import com.wpinrui.youtoob.gecko.GeckoRuntimeProvider
 import com.wpinrui.youtoob.gecko.GeckoSessionDelegate
@@ -40,21 +42,24 @@ import org.mozilla.geckoview.GeckoView
 
 private const val SPA_NAVIGATION_DELAY_MS = 1000L
 
-private val YOUTOOB_BASE_CSS = """
-    /* Hide YouTube bottom navigation */
-    ytm-pivot-bar-renderer,
-    ytm-pivot-bar-item-renderer {
-        display: none !important;
-    }
-    ytm-app {
-        padding-bottom: 0 !important;
-    }
+private fun getBaseCss(isDark: Boolean): String {
+    val backgroundColor = if (isDark) "#000" else "#fff"
+    return """
+        /* Hide YouTube bottom navigation */
+        ytm-pivot-bar-renderer,
+        ytm-pivot-bar-item-renderer {
+            display: none !important;
+        }
+        ytm-app {
+            padding-bottom: 0 !important;
+        }
 
-    /* Pure black background */
-    html, body, ytm-app, ytm-browse, ytm-watch {
-        background-color: #000 !important;
-    }
-""".trimIndent()
+        /* Theme-aware background */
+        html, body, ytm-app, ytm-browse, ytm-watch {
+            background-color: $backgroundColor !important;
+        }
+    """.trimIndent()
+}
 
 private val YOUTOOB_VIDEO_PAGE_CSS = """
     /* Hide YouTube top bar (logo/search) on video pages only */
@@ -88,9 +93,10 @@ private val YOUTOOB_VIDEO_PAGE_CSS = """
     }
 """.trimIndent()
 
-private fun injectCss(session: GeckoSession, isVideoPage: Boolean) {
+private fun injectCss(session: GeckoSession, isVideoPage: Boolean, isDark: Boolean) {
+    val baseCss = getBaseCss(isDark)
     val videoCss = if (isVideoPage) YOUTOOB_VIDEO_PAGE_CSS else ""
-    val fullCss = YOUTOOB_BASE_CSS + "\n" + videoCss
+    val fullCss = baseCss + "\n" + videoCss
 
     val cssScript = """
         (function() {
@@ -160,6 +166,11 @@ fun GeckoViewScreen(
     val settingsRepository = remember { SettingsRepository(context) }
     var cachedSettings by remember { mutableStateOf(YoutoobSettings()) }
 
+    // Track system dark mode for theme-aware CSS injection
+    val systemIsDark = isSystemInDarkTheme()
+    val systemIsDarkRef = remember { mutableStateOf(true) }
+    systemIsDarkRef.value = systemIsDark
+
     val permissionBridge = remember { PermissionBridge() }
     var pendingPermissionCallback by remember { mutableStateOf<((Map<String, Boolean>) -> Unit)?>(null) }
 
@@ -201,7 +212,12 @@ fun GeckoViewScreen(
             },
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
-                injectCss(session, currentUrl.isVideoPageUrl())
+                val isDark = when (cachedSettings.themeMode) {
+                    ThemeMode.LIGHT -> false
+                    ThemeMode.DARK -> true
+                    ThemeMode.SYSTEM -> systemIsDarkRef.value
+                }
+                injectCss(session, currentUrl.isVideoPageUrl(), isDark)
                 if (currentUrl.isVideoPageUrl()) {
                     injectSettings(session, cachedSettings)
                 }
@@ -214,7 +230,12 @@ fun GeckoViewScreen(
                 // Re-inject CSS on SPA navigation when video page state changes
                 if (isVideoPage != wasVideoPage) {
                     Handler(Looper.getMainLooper()).postDelayed({
-                        injectCss(session, isVideoPage)
+                        val isDark = when (cachedSettings.themeMode) {
+                            ThemeMode.LIGHT -> false
+                            ThemeMode.DARK -> true
+                            ThemeMode.SYSTEM -> systemIsDarkRef.value
+                        }
+                        injectCss(session, isVideoPage, isDark)
                     }, SPA_NAVIGATION_DELAY_MS)
                 }
                 // Inject settings on navigation to video page
@@ -262,10 +283,12 @@ fun GeckoViewScreen(
         }
     }
 
+    val coverColor = if (systemIsDark) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+
     AndroidView(
         factory = { ctx ->
             GeckoView(ctx).apply {
-                coverUntilFirstPaint(android.graphics.Color.BLACK)
+                coverUntilFirstPaint(coverColor)
                 setSession(session)
             }
         },
