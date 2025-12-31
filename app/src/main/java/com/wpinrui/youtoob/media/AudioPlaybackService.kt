@@ -70,6 +70,18 @@ class AudioPlaybackService : Service() {
                 updatePlaybackState()
                 updateNotification()
             }
+            ACTION_SET_PLAYING -> {
+                // Update UI state only, no broadcast (used when GeckoView already changed state)
+                isPlaying = true
+                updatePlaybackState()
+                updateNotification()
+            }
+            ACTION_SET_PAUSED -> {
+                // Update UI state only, no broadcast (used when GeckoView already changed state)
+                isPlaying = false
+                updatePlaybackState()
+                updateNotification()
+            }
             ACTION_NEXT -> {
                 sendBroadcast(Intent(BROADCAST_NEXT))
             }
@@ -277,6 +289,8 @@ class AudioPlaybackService : Service() {
         const val ACTION_UPDATE_ARTWORK = "com.wpinrui.youtoob.UPDATE_ARTWORK"
         const val ACTION_PLAY = "com.wpinrui.youtoob.PLAY"
         const val ACTION_PAUSE = "com.wpinrui.youtoob.PAUSE"
+        const val ACTION_SET_PLAYING = "com.wpinrui.youtoob.SET_PLAYING"
+        const val ACTION_SET_PAUSED = "com.wpinrui.youtoob.SET_PAUSED"
         const val ACTION_NEXT = "com.wpinrui.youtoob.NEXT"
         const val ACTION_PREVIOUS = "com.wpinrui.youtoob.PREVIOUS"
         const val ACTION_STOP = "com.wpinrui.youtoob.STOP"
@@ -324,6 +338,20 @@ class AudioPlaybackService : Service() {
         fun stop(context: Context) {
             val intent = Intent(context, AudioPlaybackService::class.java).apply {
                 action = ACTION_STOP
+            }
+            context.startService(intent)
+        }
+
+        fun setPlaying(context: Context) {
+            val intent = Intent(context, AudioPlaybackService::class.java).apply {
+                action = ACTION_SET_PLAYING
+            }
+            context.startService(intent)
+        }
+
+        fun setPaused(context: Context) {
+            val intent = Intent(context, AudioPlaybackService::class.java).apply {
+                action = ACTION_SET_PAUSED
             }
             context.startService(intent)
         }

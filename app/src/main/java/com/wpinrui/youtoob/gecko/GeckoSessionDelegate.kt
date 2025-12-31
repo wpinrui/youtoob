@@ -17,6 +17,7 @@ private const val SETTINGS_ACTION = "settings"
 class GeckoSessionDelegate(
     private val onFullscreenChange: (Boolean) -> Unit,
     private val onMediaPlaying: (MediaSession) -> Unit,
+    private val onMediaPaused: () -> Unit = {},
     private val onMediaStopped: () -> Unit,
     private val onMediaMetadata: (MediaInfo) -> Unit = {},
     private val onMediaArtwork: (Bitmap) -> Unit = {},
@@ -95,7 +96,7 @@ class GeckoSessionDelegate(
     }
 
     override fun onPause(session: GeckoSession, mediaSession: MediaSession) {
-        onMediaStopped()
+        onMediaPaused()
     }
 
     override fun onStop(session: GeckoSession, mediaSession: MediaSession) {

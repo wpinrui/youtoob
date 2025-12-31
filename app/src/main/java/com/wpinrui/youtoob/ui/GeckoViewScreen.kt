@@ -265,6 +265,15 @@ fun GeckoViewScreen(
                 if (!isMediaServiceRunning) {
                     AudioPlaybackService.start(context)
                     isMediaServiceRunning = true
+                } else {
+                    // Already running, just update to playing state
+                    AudioPlaybackService.setPlaying(context)
+                }
+            },
+            onMediaPaused = {
+                // Keep service running, just update notification to paused state
+                if (isMediaServiceRunning) {
+                    AudioPlaybackService.setPaused(context)
                 }
             },
             onMediaStopped = {
