@@ -172,7 +172,8 @@ fun GeckoViewScreen(
     onFullscreenChange: (Boolean) -> Unit = {},
     onUrlChange: (String) -> Unit = {},
     onSessionReady: (GeckoSession) -> Unit = {},
-    onPipRequest: () -> Unit = {}
+    onMiniplayerRequest: () -> Unit = {},
+    onMediaStateChange: (isPlaying: Boolean, title: String?, artist: String?) -> Unit = { _, _, _ -> }
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -181,6 +182,10 @@ fun GeckoViewScreen(
     val audioManager = remember { context.getSystemService<AudioManager>() }
     var activeMediaSession by remember { mutableStateOf<MediaSession?>(null) }
     var wasPlayingBeforeFocusLoss by remember { mutableStateOf(false) }
+
+    // Track current media state for miniplayer
+    var currentMediaTitle by remember { mutableStateOf<String?>(null) }
+    var currentMediaArtist by remember { mutableStateOf<String?>(null) }
 
     val audioFocusListener = remember {
         AudioManager.OnAudioFocusChangeListener { focusChange ->
@@ -269,12 +274,14 @@ fun GeckoViewScreen(
                     // Already running, just update to playing state
                     AudioPlaybackService.setPlaying(context)
                 }
+                onMediaStateChange(true, currentMediaTitle, currentMediaArtist)
             },
             onMediaPaused = {
                 // Keep service running, just update notification to paused state
                 if (isMediaServiceRunning) {
                     AudioPlaybackService.setPaused(context)
                 }
+                onMediaStateChange(false, currentMediaTitle, currentMediaArtist)
             },
             onMediaStopped = {
                 audioManager?.abandonAudioFocusRequest(audioFocusRequest)
@@ -282,8 +289,11 @@ fun GeckoViewScreen(
                     AudioPlaybackService.stop(context)
                     isMediaServiceRunning = false
                 }
+                onMediaStateChange(false, null, null)
             },
             onMediaMetadata = { metadata ->
+                currentMediaTitle = metadata.title
+                currentMediaArtist = metadata.artist
                 if (isMediaServiceRunning) {
                     AudioPlaybackService.updateMetadata(
                         context,
@@ -291,6 +301,7 @@ fun GeckoViewScreen(
                         metadata.artist
                     )
                 }
+                onMediaStateChange(true, metadata.title, metadata.artist)
             },
             onMediaArtwork = { bitmap ->
                 if (isMediaServiceRunning) {
@@ -333,7 +344,7 @@ fun GeckoViewScreen(
             onSettingsRequest = {
                 context.startActivity(Intent(context, SettingsActivity::class.java))
             },
-            onPipRequest = onPipRequest
+            onMiniplayerRequest = onMiniplayerRequest
         )
     }
 

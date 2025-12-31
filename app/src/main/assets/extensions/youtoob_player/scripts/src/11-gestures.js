@@ -174,16 +174,16 @@ function setupGestures(video, overlay) {
         toggleFullscreen();
     }
 
-    // Enter Picture-in-Picture mode (for swipe down in portrait)
-    // Uses custom URL scheme to trigger Android PiP mode via MainActivity
-    // Video continues playing in floating window; tapping returns to full app
+    // Enter miniplayer mode (for swipe down in portrait)
+    // Uses custom URL scheme to trigger miniplayer bar and navigate to YouTube home
+    // Audio continues playing; user can browse and tap bar to return to video
     // Uses window flag to prevent multiple triggers across script instances
-    function enterPipMode() {
-        if (window._youtoobEnteringPip) return;
-        window._youtoobEnteringPip = true;
+    function enterMiniplayerMode() {
+        if (window._youtoobEnteringMiniplayer) return;
+        window._youtoobEnteringMiniplayer = true;
         resetTransform(false);
-        location.href = 'youtoob://pip';
-        setTimeout(() => { window._youtoobEnteringPip = false; }, NAVIGATE_BACK_DEBOUNCE_MS);
+        location.href = 'youtoob://miniplayer';
+        setTimeout(() => { window._youtoobEnteringMiniplayer = false; }, NAVIGATE_BACK_DEBOUNCE_MS);
     }
 
     // Attach to document instead of overlay - overlay moves during fullscreen which corrupts touch handling
@@ -319,8 +319,8 @@ function setupGestures(video, overlay) {
                 // Portrait: swipe up → enter fullscreen
                 completeFullscreenGesture();
             } else if (dragDirection === 'down' && !isFullscreen() && deltaY > COMPLETE_THRESHOLD) {
-                // Portrait: swipe down → enter PiP mode
-                enterPipMode();
+                // Portrait: swipe down → enter miniplayer mode
+                enterMiniplayerMode();
             } else if (dragDirection === 'down' && isFullscreen() && deltaY > COMPLETE_THRESHOLD) {
                 // Fullscreen: swipe down → exit fullscreen
                 completeFullscreenGesture();
