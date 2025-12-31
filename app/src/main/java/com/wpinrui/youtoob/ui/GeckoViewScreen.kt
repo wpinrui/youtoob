@@ -298,6 +298,14 @@ fun GeckoViewScreen(
     }
 
     val isDark = cachedSettings.themeMode.isDark(systemIsDark)
+
+    // Reload page when theme changes to re-apply CSS
+    var previousIsDark by remember { mutableStateOf(isDark) }
+    if (isDark != previousIsDark) {
+        previousIsDark = isDark
+        session.reload()
+    }
+
     val coverColor = if (isDark) android.graphics.Color.BLACK else android.graphics.Color.WHITE
 
     AndroidView(

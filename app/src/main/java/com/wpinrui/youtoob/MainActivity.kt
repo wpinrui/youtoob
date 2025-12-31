@@ -1,8 +1,10 @@
 package com.wpinrui.youtoob
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -25,10 +27,22 @@ import com.wpinrui.youtoob.utils.isVideoPageUrl
 import org.mozilla.geckoview.GeckoSession
 
 class MainActivity : ComponentActivity() {
+    // Triggers recomposition when configuration changes
+    private val configVersion = mutableIntStateOf(0)
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        configVersion.intValue++
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            // Read configVersion to trigger recomposition on config changes
+            @Suppress("UNUSED_EXPRESSION")
+            configVersion.intValue
+
             YouToobThemeWithSettings {
                 var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
                 var navigateToUrl by remember { mutableStateOf<String?>(null) }
