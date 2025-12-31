@@ -24,6 +24,11 @@ const PLAYER_STYLES = `
         contain: none !important;
     }
 
+    /* Fix gap between player and related chips - adjust for removed 48px top bar */
+    ytm-related-chip-cloud-renderer {
+        top: calc(56.25vw + 48px) !important;
+    }
+
     /* Hide YouTube's native mobile controls */
     .player-controls-content,
     .ytp-chrome-bottom,
