@@ -85,6 +85,12 @@ private fun getBaseCss(isDark: Boolean): String {
         .published-time {
             color: $secondaryTextColor !important;
         }
+
+        /* Selected chips have light background - need dark text for contrast */
+        ytm-chip-cloud-chip-renderer.selected .yt-core-attributed-string,
+        ytm-chip-cloud-chip-renderer[aria-selected="true"] .yt-core-attributed-string {
+            color: #0f0f0f !important;
+        }
     """.trimIndent()
 }
 
