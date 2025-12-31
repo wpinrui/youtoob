@@ -9,6 +9,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -17,9 +19,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.wpinrui.youtoob.ui.DownloadsActivity
 import com.wpinrui.youtoob.ui.GeckoViewScreen
+import com.wpinrui.youtoob.ui.components.MiniplayerBar
+import com.wpinrui.youtoob.ui.components.MiniplayerState
 import com.wpinrui.youtoob.ui.components.YoutoobBottomNav
 import com.wpinrui.youtoob.ui.navigation.NavDestination
 import com.wpinrui.youtoob.ui.theme.YouToobThemeWithSettings
@@ -50,11 +55,25 @@ class MainActivity : ComponentActivity() {
                 var currentUrl by remember { mutableStateOf("") }
                 var geckoSession by remember { mutableStateOf<GeckoSession?>(null) }
 
+                // Miniplayer state
+                var miniplayerState by remember { mutableStateOf(MiniplayerState()) }
+
                 val isVideoPage = currentUrl.isVideoPageUrl()
+                // Hide miniplayer when user navigates to a video page (new video replaces old)
+                if (isVideoPage && miniplayerState.isVisible) {
+                    miniplayerState = miniplayerState.copy(isVisible = false, videoUrl = null)
+                }
+
                 val shouldShowNav = !isFullscreen && !isVideoPage
+                val shouldShowMiniplayer = miniplayerState.isVisible && !isVideoPage && !isFullscreen
 
                 BackHandler(enabled = isVideoPage) {
-                    geckoSession?.goBack()
+                    // Save current video URL and navigate to home
+                    miniplayerState = miniplayerState.copy(
+                        isVisible = true,
+                        videoUrl = currentUrl
+                    )
+                    geckoSession?.loadUri("https://m.youtube.com")
                 }
 
                 val backgroundColor = MaterialTheme.colorScheme.background
@@ -63,21 +82,48 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize().background(backgroundColor),
                     containerColor = backgroundColor,
                     bottomBar = {
-                        YoutoobBottomNav(
-                            currentDestination = currentDestination,
-                            onNavigate = { destination ->
-                                currentDestination = destination
-                                when {
-                                    destination.isYouTubeDestination -> {
-                                        navigateToUrl = destination.youtubeUrl
+                        Column {
+                            // Miniplayer bar above bottom nav
+                            MiniplayerBar(
+                                state = miniplayerState.copy(isVisible = shouldShowMiniplayer),
+                                onExpand = {
+                                    // Navigate back to video
+                                    miniplayerState.videoUrl?.let { url ->
+                                        navigateToUrl = url
                                     }
-                                    destination == NavDestination.DOWNLOADS -> {
-                                        startActivity(Intent(this@MainActivity, DownloadsActivity::class.java))
+                                    miniplayerState = miniplayerState.copy(isVisible = false)
+                                },
+                                onPlayPause = {
+                                    // Toggle play/pause via broadcast
+                                    val action = if (miniplayerState.isPlaying) {
+                                        "com.wpinrui.youtoob.PAUSE"
+                                    } else {
+                                        "com.wpinrui.youtoob.PLAY"
                                     }
+                                    sendBroadcast(Intent(action).setPackage(packageName))
+                                },
+                                onClose = {
+                                    // Stop playback and hide miniplayer
+                                    sendBroadcast(Intent("com.wpinrui.youtoob.STOP").setPackage(packageName))
+                                    miniplayerState = MiniplayerState()
                                 }
-                            },
-                            isVisible = shouldShowNav
-                        )
+                            )
+                            YoutoobBottomNav(
+                                currentDestination = currentDestination,
+                                onNavigate = { destination ->
+                                    currentDestination = destination
+                                    when {
+                                        destination.isYouTubeDestination -> {
+                                            navigateToUrl = destination.youtubeUrl
+                                        }
+                                        destination == NavDestination.DOWNLOADS -> {
+                                            startActivity(Intent(this@MainActivity, DownloadsActivity::class.java))
+                                        }
+                                    }
+                                },
+                                isVisible = shouldShowNav
+                            )
+                        }
                     }
                 ) { innerPadding ->
                     GeckoViewScreen(
@@ -91,6 +137,21 @@ class MainActivity : ComponentActivity() {
                         },
                         onSessionReady = { session ->
                             geckoSession = session
+                        },
+                        onMiniplayerRequest = {
+                            // Save current video URL and navigate to home
+                            miniplayerState = miniplayerState.copy(
+                                isVisible = true,
+                                videoUrl = currentUrl
+                            )
+                            geckoSession?.loadUri("https://m.youtube.com")
+                        },
+                        onMediaStateChange = { isPlaying, title, artist ->
+                            miniplayerState = miniplayerState.copy(
+                                isPlaying = isPlaying,
+                                title = title,
+                                artist = artist
+                            )
                         }
                     )
                 }

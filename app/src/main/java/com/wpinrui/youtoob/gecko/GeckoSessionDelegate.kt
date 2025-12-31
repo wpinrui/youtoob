@@ -13,6 +13,7 @@ data class MediaInfo(val title: String?, val artist: String?)
 private const val YOUTOOB_SCHEME = "youtoob"
 private const val GOBACK_ACTION = "goback"
 private const val SETTINGS_ACTION = "settings"
+private const val MINIPLAYER_ACTION = "miniplayer"
 private const val ARTWORK_BITMAP_SIZE = 256
 
 class GeckoSessionDelegate(
@@ -27,7 +28,8 @@ class GeckoSessionDelegate(
     private val onUrlChange: (String, GeckoSession) -> Unit = { _, _ -> },
     private val onShareRequest: (ShareRequest, (Boolean) -> Unit) -> Unit = { _, callback -> callback(false) },
     private val onGoBackRequest: (GeckoSession) -> Unit = {},
-    private val onSettingsRequest: () -> Unit = {}
+    private val onSettingsRequest: () -> Unit = {},
+    private val onMiniplayerRequest: () -> Unit = {}
 ) : GeckoSession.ContentDelegate,
     GeckoSession.PermissionDelegate,
     GeckoSession.ProgressDelegate,
@@ -140,6 +142,7 @@ class GeckoSessionDelegate(
             when (action) {
                 GOBACK_ACTION -> onGoBackRequest(session)
                 SETTINGS_ACTION -> onSettingsRequest()
+                MINIPLAYER_ACTION -> onMiniplayerRequest()
             }
             // Block the navigation - we handled it
             return GeckoResult.fromValue(AllowOrDeny.DENY)

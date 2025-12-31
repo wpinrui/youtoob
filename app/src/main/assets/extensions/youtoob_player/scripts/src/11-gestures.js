@@ -174,16 +174,16 @@ function setupGestures(video, overlay) {
         toggleFullscreen();
     }
 
-    // Navigate back (for swipe down in portrait)
-    // Uses custom URL scheme to trigger native GeckoSession.goBack() instead of JS history.back()
-    // This avoids issues with YouTube's SPA intercepting history.back() calls
+    // Enter miniplayer mode (for swipe down in portrait)
+    // Uses custom URL scheme to trigger miniplayer bar and navigate to YouTube home
+    // Audio continues playing; user can browse and tap bar to return to video
     // Uses window flag to prevent multiple triggers across script instances
-    function navigateBack() {
-        if (window._youtoobNavigatingBack) return;
-        window._youtoobNavigatingBack = true;
+    function enterMiniplayerMode() {
+        if (window._youtoobEnteringMiniplayer) return;
+        window._youtoobEnteringMiniplayer = true;
         resetTransform(false);
-        location.href = 'youtoob://goback';
-        setTimeout(() => { window._youtoobNavigatingBack = false; }, NAVIGATE_BACK_DEBOUNCE_MS);
+        location.href = 'youtoob://miniplayer';
+        setTimeout(() => { window._youtoobEnteringMiniplayer = false; }, NAVIGATE_BACK_DEBOUNCE_MS);
     }
 
     // Attach to document instead of overlay - overlay moves during fullscreen which corrupts touch handling
@@ -319,8 +319,8 @@ function setupGestures(video, overlay) {
                 // Portrait: swipe up → enter fullscreen
                 completeFullscreenGesture();
             } else if (dragDirection === 'down' && !isFullscreen() && deltaY > COMPLETE_THRESHOLD) {
-                // Portrait: swipe down → go back
-                navigateBack();
+                // Portrait: swipe down → enter miniplayer mode
+                enterMiniplayerMode();
             } else if (dragDirection === 'down' && isFullscreen() && deltaY > COMPLETE_THRESHOLD) {
                 // Fullscreen: swipe down → exit fullscreen
                 completeFullscreenGesture();
