@@ -1,14 +1,17 @@
 package com.wpinrui.youtoob.ui
 
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
+import org.mozilla.geckoview.MediaSession
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -220,6 +223,7 @@ fun GeckoViewScreen(
     }
 
     var isMediaServiceRunning by remember { mutableStateOf(false) }
+    var activeMediaSession by remember { mutableStateOf<MediaSession?>(null) }
 
     val delegate = remember {
         GeckoSessionDelegate(
@@ -230,8 +234,9 @@ fun GeckoViewScreen(
                     setOrientation(it, fullscreen)
                 }
             },
-            onMediaPlaying = {
+            onMediaPlaying = { mediaSession ->
                 audioManager?.requestAudioFocus(audioFocusRequest)
+                activeMediaSession = mediaSession
                 if (!isMediaServiceRunning) {
                     AudioPlaybackService.start(context)
                     isMediaServiceRunning = true
@@ -246,7 +251,16 @@ fun GeckoViewScreen(
             },
             onMediaMetadata = { metadata ->
                 if (isMediaServiceRunning) {
-                    AudioPlaybackService.updateMetadata(context, metadata.title, metadata.artist)
+                    AudioPlaybackService.updateMetadata(
+                        context,
+                        metadata.title,
+                        metadata.artist
+                    )
+                }
+            },
+            onMediaArtwork = { bitmap ->
+                if (isMediaServiceRunning) {
+                    AudioPlaybackService.updateArtwork(context, bitmap)
                 }
             },
             permissionBridge = permissionBridge,
@@ -296,6 +310,35 @@ fun GeckoViewScreen(
             navigationDelegate = delegate
             mediaSessionDelegate = delegate
             promptDelegate = delegate
+        }
+    }
+
+    // Register broadcast receivers for media controls from notification
+    DisposableEffect(activeMediaSession) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                val session = activeMediaSession ?: return
+                when (intent?.action) {
+                    AudioPlaybackService.BROADCAST_PLAY -> session.play()
+                    AudioPlaybackService.BROADCAST_PAUSE -> session.pause()
+                    AudioPlaybackService.BROADCAST_STOP -> session.stop()
+                    AudioPlaybackService.BROADCAST_NEXT -> session.nextTrack()
+                    AudioPlaybackService.BROADCAST_PREVIOUS -> session.previousTrack()
+                }
+            }
+        }
+
+        val filter = IntentFilter().apply {
+            addAction(AudioPlaybackService.BROADCAST_PLAY)
+            addAction(AudioPlaybackService.BROADCAST_PAUSE)
+            addAction(AudioPlaybackService.BROADCAST_STOP)
+            addAction(AudioPlaybackService.BROADCAST_NEXT)
+            addAction(AudioPlaybackService.BROADCAST_PREVIOUS)
+        }
+        context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+
+        onDispose {
+            context.unregisterReceiver(receiver)
         }
     }
 

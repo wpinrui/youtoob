@@ -14,7 +14,6 @@ import android.os.IBinder
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.media.app.NotificationCompat.MediaStyle
 import com.wpinrui.youtoob.MainActivity
@@ -51,17 +50,34 @@ class AudioPlaybackService : Service() {
                 updateNotification()
                 updateMediaSessionMetadata()
             }
+            ACTION_UPDATE_ARTWORK -> {
+                pendingArtwork?.let {
+                    currentArtwork = it
+                    pendingArtwork = null
+                    updateNotification()
+                    updateMediaSessionMetadata()
+                }
+            }
             ACTION_PLAY -> {
                 isPlaying = true
+                sendBroadcast(Intent(BROADCAST_PLAY))
                 updatePlaybackState()
                 updateNotification()
             }
             ACTION_PAUSE -> {
                 isPlaying = false
+                sendBroadcast(Intent(BROADCAST_PAUSE))
                 updatePlaybackState()
                 updateNotification()
             }
+            ACTION_NEXT -> {
+                sendBroadcast(Intent(BROADCAST_NEXT))
+            }
+            ACTION_PREVIOUS -> {
+                sendBroadcast(Intent(BROADCAST_PREVIOUS))
+            }
             ACTION_STOP -> {
+                sendBroadcast(Intent(BROADCAST_STOP))
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
@@ -92,15 +108,31 @@ class AudioPlaybackService : Service() {
         mediaSession = MediaSessionCompat(this, "YouToobMediaSession").apply {
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
+                    isPlaying = true
                     sendBroadcast(Intent(BROADCAST_PLAY))
+                    updatePlaybackState()
+                    updateNotification()
                 }
 
                 override fun onPause() {
+                    isPlaying = false
                     sendBroadcast(Intent(BROADCAST_PAUSE))
+                    updatePlaybackState()
+                    updateNotification()
                 }
 
                 override fun onStop() {
                     sendBroadcast(Intent(BROADCAST_STOP))
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
+
+                override fun onSkipToNext() {
+                    sendBroadcast(Intent(BROADCAST_NEXT))
+                }
+
+                override fun onSkipToPrevious() {
+                    sendBroadcast(Intent(BROADCAST_PREVIOUS))
                 }
 
                 override fun onSeekTo(pos: Long) {
@@ -138,6 +170,8 @@ class AudioPlaybackService : Service() {
                 PlaybackStateCompat.ACTION_PLAY or
                 PlaybackStateCompat.ACTION_PAUSE or
                 PlaybackStateCompat.ACTION_STOP or
+                PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
                 PlaybackStateCompat.ACTION_SEEK_TO
             )
             .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f)
@@ -168,6 +202,12 @@ class AudioPlaybackService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val prevAction = NotificationCompat.Action(
+            R.drawable.ic_skip_previous,
+            "Previous",
+            getPendingIntent(ACTION_PREVIOUS)
+        )
+
         val playPauseAction = if (isPlaying) {
             NotificationCompat.Action(
                 R.drawable.ic_pause,
@@ -182,6 +222,12 @@ class AudioPlaybackService : Service() {
             )
         }
 
+        val nextAction = NotificationCompat.Action(
+            R.drawable.ic_skip_next,
+            "Next",
+            getPendingIntent(ACTION_NEXT)
+        )
+
         val stopAction = NotificationCompat.Action(
             R.drawable.ic_stop,
             "Stop",
@@ -195,12 +241,14 @@ class AudioPlaybackService : Service() {
             .setContentIntent(contentIntent)
             .setOngoing(true)
             .setShowWhen(false)
-            .addAction(playPauseAction)
-            .addAction(stopAction)
+            .addAction(prevAction)      // 0
+            .addAction(playPauseAction) // 1
+            .addAction(nextAction)      // 2
+            .addAction(stopAction)      // 3
             .setStyle(
                 MediaStyle()
                     .setMediaSession(mediaSession.sessionToken)
-                    .setShowActionsInCompactView(0, 1)
+                    .setShowActionsInCompactView(0, 1, 2) // prev, play/pause, next
             )
             .apply {
                 currentArtwork?.let { setLargeIcon(it) }
@@ -221,14 +269,16 @@ class AudioPlaybackService : Service() {
     }
 
     companion object {
-        private const val TAG = "YTB_AudioService"
         private const val CHANNEL_ID = "youtoob_playback"
         private const val NOTIFICATION_ID = 1
 
         const val ACTION_START = "com.wpinrui.youtoob.START"
         const val ACTION_UPDATE_METADATA = "com.wpinrui.youtoob.UPDATE_METADATA"
+        const val ACTION_UPDATE_ARTWORK = "com.wpinrui.youtoob.UPDATE_ARTWORK"
         const val ACTION_PLAY = "com.wpinrui.youtoob.PLAY"
         const val ACTION_PAUSE = "com.wpinrui.youtoob.PAUSE"
+        const val ACTION_NEXT = "com.wpinrui.youtoob.NEXT"
+        const val ACTION_PREVIOUS = "com.wpinrui.youtoob.PREVIOUS"
         const val ACTION_STOP = "com.wpinrui.youtoob.STOP"
 
         const val EXTRA_TITLE = "title"
@@ -238,7 +288,12 @@ class AudioPlaybackService : Service() {
         const val BROADCAST_PLAY = "com.wpinrui.youtoob.BROADCAST_PLAY"
         const val BROADCAST_PAUSE = "com.wpinrui.youtoob.BROADCAST_PAUSE"
         const val BROADCAST_STOP = "com.wpinrui.youtoob.BROADCAST_STOP"
+        const val BROADCAST_NEXT = "com.wpinrui.youtoob.BROADCAST_NEXT"
+        const val BROADCAST_PREVIOUS = "com.wpinrui.youtoob.BROADCAST_PREVIOUS"
         const val BROADCAST_SEEK = "com.wpinrui.youtoob.BROADCAST_SEEK"
+
+        // Temporary storage for bitmap since we can't pass it via Intent
+        private var pendingArtwork: Bitmap? = null
 
         fun start(context: Context, title: String? = null, artist: String? = null) {
             val intent = Intent(context, AudioPlaybackService::class.java).apply {
@@ -254,6 +309,14 @@ class AudioPlaybackService : Service() {
                 action = ACTION_UPDATE_METADATA
                 title?.let { putExtra(EXTRA_TITLE, it) }
                 artist?.let { putExtra(EXTRA_ARTIST, it) }
+            }
+            context.startService(intent)
+        }
+
+        fun updateArtwork(context: Context, bitmap: Bitmap) {
+            pendingArtwork = bitmap
+            val intent = Intent(context, AudioPlaybackService::class.java).apply {
+                action = ACTION_UPDATE_ARTWORK
             }
             context.startService(intent)
         }
