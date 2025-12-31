@@ -45,6 +45,12 @@ enum class ThemeMode(val label: String, val value: String) {
     LIGHT("Light", "light"),
     DARK("Dark", "dark");
 
+    fun isDark(systemIsDark: Boolean): Boolean = when (this) {
+        LIGHT -> false
+        DARK -> true
+        SYSTEM -> systemIsDark
+    }
+
     companion object {
         fun fromValue(value: String): ThemeMode =
             entries.find { it.value == value } ?: SYSTEM

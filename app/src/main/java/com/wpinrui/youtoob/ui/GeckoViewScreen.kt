@@ -238,11 +238,7 @@ fun GeckoViewScreen(
             },
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
-                val isDark = when (cachedSettings.themeMode) {
-                    ThemeMode.LIGHT -> false
-                    ThemeMode.DARK -> true
-                    ThemeMode.SYSTEM -> systemIsDarkRef.value
-                }
+                val isDark = cachedSettings.themeMode.isDark(systemIsDarkRef.value)
                 injectCss(session, currentUrl.isVideoPageUrl(), isDark)
                 if (currentUrl.isVideoPageUrl()) {
                     injectSettings(session, cachedSettings)
@@ -256,11 +252,7 @@ fun GeckoViewScreen(
                 // Re-inject CSS on SPA navigation when video page state changes
                 if (isVideoPage != wasVideoPage) {
                     Handler(Looper.getMainLooper()).postDelayed({
-                        val isDark = when (cachedSettings.themeMode) {
-                            ThemeMode.LIGHT -> false
-                            ThemeMode.DARK -> true
-                            ThemeMode.SYSTEM -> systemIsDarkRef.value
-                        }
+                        val isDark = cachedSettings.themeMode.isDark(systemIsDarkRef.value)
                         injectCss(session, isVideoPage, isDark)
                     }, SPA_NAVIGATION_DELAY_MS)
                 }
