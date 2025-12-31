@@ -301,7 +301,8 @@ fun GeckoViewScreen(
         }
     }
 
-    val coverColor = if (systemIsDark) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+    val isDark = cachedSettings.themeMode.isDark(systemIsDark)
+    val coverColor = if (isDark) android.graphics.Color.BLACK else android.graphics.Color.WHITE
 
     AndroidView(
         factory = { ctx ->
