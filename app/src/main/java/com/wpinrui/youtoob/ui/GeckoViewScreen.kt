@@ -21,12 +21,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.getSystemService
 import com.wpinrui.youtoob.data.SettingsRepository
+import com.wpinrui.youtoob.data.ThemeMode
 import com.wpinrui.youtoob.data.YoutoobSettings
 import com.wpinrui.youtoob.gecko.GeckoRuntimeProvider
 import com.wpinrui.youtoob.gecko.GeckoSessionDelegate
@@ -40,21 +43,56 @@ import org.mozilla.geckoview.GeckoView
 
 private const val SPA_NAVIGATION_DELAY_MS = 1000L
 
-private val YOUTOOB_BASE_CSS = """
-    /* Hide YouTube bottom navigation */
-    ytm-pivot-bar-renderer,
-    ytm-pivot-bar-item-renderer {
-        display: none !important;
-    }
-    ytm-app {
-        padding-bottom: 0 !important;
-    }
+private fun getBaseCss(isDark: Boolean): String {
+    val backgroundColor = if (isDark) "#000" else "#fff"
+    val textColor = if (isDark) "#fff" else "#0f0f0f"
+    val secondaryTextColor = if (isDark) "#aaa" else "#606060"
 
-    /* Pure black background */
-    html, body, ytm-app, ytm-browse, ytm-watch {
-        background-color: #000 !important;
-    }
-""".trimIndent()
+    return """
+        /* Hide YouTube bottom navigation */
+        ytm-pivot-bar-renderer,
+        ytm-pivot-bar-item-renderer {
+            display: none !important;
+        }
+        ytm-app {
+            padding-bottom: 0 !important;
+        }
+
+        /* Theme-aware background */
+        html, body, ytm-app, ytm-browse, ytm-watch {
+            background-color: $backgroundColor !important;
+        }
+
+        /* Theme-aware text colors for light mode */
+        ytm-rich-item-renderer,
+        ytm-video-with-context-renderer,
+        ytm-compact-video-renderer,
+        ytm-reel-item-renderer,
+        .media-item-headline,
+        .media-item-metadata,
+        .video-title,
+        .channel-name,
+        h3, h4,
+        ytm-badge-and-byline-renderer,
+        .yt-core-attributed-string {
+            color: $textColor !important;
+        }
+
+        /* Secondary text (views, time, etc) */
+        .media-item-byline,
+        .ytm-badge-and-byline-renderer span,
+        .view-count,
+        .published-time {
+            color: $secondaryTextColor !important;
+        }
+
+        /* Selected chips have light background - need dark text for contrast */
+        ytm-chip-cloud-chip-renderer.selected .yt-core-attributed-string,
+        ytm-chip-cloud-chip-renderer[aria-selected="true"] .yt-core-attributed-string {
+            color: #0f0f0f !important;
+        }
+    """.trimIndent()
+}
 
 private val YOUTOOB_VIDEO_PAGE_CSS = """
     /* Hide YouTube top bar (logo/search) on video pages only */
@@ -88,9 +126,10 @@ private val YOUTOOB_VIDEO_PAGE_CSS = """
     }
 """.trimIndent()
 
-private fun injectCss(session: GeckoSession, isVideoPage: Boolean) {
+private fun injectCss(session: GeckoSession, isVideoPage: Boolean, isDark: Boolean) {
+    val baseCss = getBaseCss(isDark)
     val videoCss = if (isVideoPage) YOUTOOB_VIDEO_PAGE_CSS else ""
-    val fullCss = YOUTOOB_BASE_CSS + "\n" + videoCss
+    val fullCss = baseCss + "\n" + videoCss
 
     val cssScript = """
         (function() {
@@ -108,20 +147,10 @@ private fun injectCss(session: GeckoSession, isVideoPage: Boolean) {
 }
 
 private fun injectSettings(session: GeckoSession, settings: YoutoobSettings) {
-    val qualityMap = mapOf(
-        "auto" to "auto",
-        "480" to "large",
-        "720" to "hd720",
-        "1080" to "hd1080",
-        "1440" to "hd1440",
-        "2160" to "hd2160"
-    )
-    val ytQuality = qualityMap[settings.defaultQuality.value] ?: "auto"
-
     val settingsScript = """
         (function() {
             window._youtoobSettings = {
-                defaultQuality: '$ytQuality',
+                defaultQuality: '${settings.defaultQuality.youtubeQuality}',
                 defaultSpeed: ${settings.defaultSpeed.value},
                 autoplayEnabled: ${settings.autoplayEnabled}
             };
@@ -159,6 +188,10 @@ fun GeckoViewScreen(
     val runtime = remember { GeckoRuntimeProvider.getRuntime(context) }
     val settingsRepository = remember { SettingsRepository(context) }
     var cachedSettings by remember { mutableStateOf(YoutoobSettings()) }
+
+    // Track system dark mode for theme-aware CSS injection
+    val systemIsDark = isSystemInDarkTheme()
+    val currentSystemIsDark by rememberUpdatedState(systemIsDark)
 
     val permissionBridge = remember { PermissionBridge() }
     var pendingPermissionCallback by remember { mutableStateOf<((Map<String, Boolean>) -> Unit)?>(null) }
@@ -201,7 +234,8 @@ fun GeckoViewScreen(
             },
             permissionBridge = permissionBridge,
             onPageLoaded = { session ->
-                injectCss(session, currentUrl.isVideoPageUrl())
+                val isDark = cachedSettings.themeMode.isDark(currentSystemIsDark)
+                injectCss(session, currentUrl.isVideoPageUrl(), isDark)
                 if (currentUrl.isVideoPageUrl()) {
                     injectSettings(session, cachedSettings)
                 }
@@ -214,7 +248,8 @@ fun GeckoViewScreen(
                 // Re-inject CSS on SPA navigation when video page state changes
                 if (isVideoPage != wasVideoPage) {
                     Handler(Looper.getMainLooper()).postDelayed({
-                        injectCss(session, isVideoPage)
+                        val isDark = cachedSettings.themeMode.isDark(currentSystemIsDark)
+                        injectCss(session, isVideoPage, isDark)
                     }, SPA_NAVIGATION_DELAY_MS)
                 }
                 // Inject settings on navigation to video page
@@ -262,10 +297,21 @@ fun GeckoViewScreen(
         }
     }
 
+    val isDark = cachedSettings.themeMode.isDark(systemIsDark)
+
+    // Reload page when theme changes to re-apply CSS
+    var previousIsDark by remember { mutableStateOf(isDark) }
+    if (isDark != previousIsDark) {
+        previousIsDark = isDark
+        session.reload()
+    }
+
+    val coverColor = if (isDark) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+
     AndroidView(
         factory = { ctx ->
             GeckoView(ctx).apply {
-                coverUntilFirstPaint(android.graphics.Color.BLACK)
+                coverUntilFirstPaint(coverColor)
                 setSession(session)
             }
         },

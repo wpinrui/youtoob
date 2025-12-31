@@ -18,7 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.wpinrui.youtoob.ui.theme.YouToobTheme
+import com.wpinrui.youtoob.ui.theme.YouToobThemeWithSettings
 
 class DownloadsActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -26,7 +26,7 @@ class DownloadsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            YouToobTheme {
+            YouToobThemeWithSettings {
                 Scaffold(
                     topBar = {
                         TopAppBar(

@@ -12,13 +12,13 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "youtoob_settings")
 
-enum class VideoQuality(val label: String, val value: String) {
-    AUTO("Auto", "auto"),
-    P480("480p", "480"),
-    P720("720p", "720"),
-    P1080("1080p", "1080"),
-    P1440("1440p", "1440"),
-    P4K("4K", "2160");
+enum class VideoQuality(val label: String, val value: String, val youtubeQuality: String) {
+    AUTO("Auto", "auto", "auto"),
+    P480("480p", "480", "large"),
+    P720("720p", "720", "hd720"),
+    P1080("1080p", "1080", "hd1080"),
+    P1440("1440p", "1440", "hd1440"),
+    P4K("4K", "2160", "hd2160");
 
     companion object {
         fun fromValue(value: String): VideoQuality =
@@ -40,10 +40,28 @@ enum class PlaybackSpeed(val label: String, val value: Float) {
     }
 }
 
+enum class ThemeMode(val label: String, val value: String) {
+    SYSTEM("System", "system"),
+    LIGHT("Light", "light"),
+    DARK("Dark", "dark");
+
+    fun isDark(systemIsDark: Boolean): Boolean = when (this) {
+        LIGHT -> false
+        DARK -> true
+        SYSTEM -> systemIsDark
+    }
+
+    companion object {
+        fun fromValue(value: String): ThemeMode =
+            entries.find { it.value == value } ?: SYSTEM
+    }
+}
+
 data class YoutoobSettings(
     val defaultQuality: VideoQuality = VideoQuality.AUTO,
     val defaultSpeed: PlaybackSpeed = PlaybackSpeed.X1,
-    val autoplayEnabled: Boolean = true
+    val autoplayEnabled: Boolean = true,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM
 )
 
 class SettingsRepository(private val context: Context) {
@@ -52,6 +70,7 @@ class SettingsRepository(private val context: Context) {
         val DEFAULT_QUALITY = stringPreferencesKey("default_quality")
         val DEFAULT_SPEED = stringPreferencesKey("default_speed")
         val AUTOPLAY_ENABLED = booleanPreferencesKey("autoplay_enabled")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
     }
 
     val settings: Flow<YoutoobSettings> = context.dataStore.data.map { preferences ->
@@ -62,7 +81,10 @@ class SettingsRepository(private val context: Context) {
             defaultSpeed = PlaybackSpeed.fromValue(
                 preferences[PreferenceKeys.DEFAULT_SPEED]?.toFloatOrNull() ?: PlaybackSpeed.X1.value
             ),
-            autoplayEnabled = preferences[PreferenceKeys.AUTOPLAY_ENABLED] ?: true
+            autoplayEnabled = preferences[PreferenceKeys.AUTOPLAY_ENABLED] ?: true,
+            themeMode = ThemeMode.fromValue(
+                preferences[PreferenceKeys.THEME_MODE] ?: ThemeMode.SYSTEM.value
+            )
         )
     }
 
@@ -81,6 +103,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun setAutoplayEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferenceKeys.AUTOPLAY_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setThemeMode(mode: ThemeMode) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferenceKeys.THEME_MODE] = mode.value
         }
     }
 }
